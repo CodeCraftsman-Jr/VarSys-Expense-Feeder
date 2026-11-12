@@ -3,9 +3,9 @@ import 'dart:math';
 
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:pckt/core/secrets.dart';
-import 'package:pckt/data/db/database.dart';
-import 'package:pckt/data/db/db_encryption.dart';
+import 'package:moneytrail/core/secrets.dart';
+import 'package:moneytrail/data/db/database.dart';
+import 'package:moneytrail/data/db/db_encryption.dart';
 import 'package:sqlite3/sqlite3.dart';
 
 /// In-memory stand-in for the keystore.
@@ -35,7 +35,7 @@ void main() {
 
   setUp(() {
     dir = Directory.systemTemp.createTempSync('pckt_db_');
-    path = '${dir.path}${Platform.pathSeparator}pckt.sqlite';
+    path = '${dir.path}${Platform.pathSeparator}moneytrail.sqlite';
   });
 
   tearDown(() {

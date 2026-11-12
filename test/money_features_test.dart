@@ -3,12 +3,12 @@ import 'dart:io';
 import 'package:drift/drift.dart' hide isNull, isNotNull;
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:pckt/data/db/database.dart';
-import 'package:pckt/features/budgets/budget_math.dart';
-import 'package:pckt/features/recurring/recurring_detector.dart';
-import 'package:pckt/ingestion/categorizer.dart';
-import 'package:pckt/ingestion/parser/parsed_txn.dart';
-import 'package:pckt/ui/amount_field.dart';
+import 'package:moneytrail/data/db/database.dart';
+import 'package:moneytrail/features/budgets/budget_math.dart';
+import 'package:moneytrail/features/recurring/recurring_detector.dart';
+import 'package:moneytrail/ingestion/categorizer.dart';
+import 'package:moneytrail/ingestion/parser/parsed_txn.dart';
+import 'package:moneytrail/ui/amount_field.dart';
 
 var _id = 0;
 

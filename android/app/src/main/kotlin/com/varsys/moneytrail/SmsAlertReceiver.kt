@@ -1,4 +1,4 @@
-package com.pckt.pckt
+package com.varsys.moneytrail
 
 import android.Manifest
 import android.app.NotificationChannel

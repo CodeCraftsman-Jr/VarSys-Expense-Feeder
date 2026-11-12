@@ -3,14 +3,14 @@ import 'dart:convert';
 import 'package:drift/drift.dart' hide isNull, isNotNull;
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:pckt/data/db/database.dart';
-import 'package:pckt/ingestion/ingestion_service.dart';
-import 'package:pckt/ingestion/parser/parsed_txn.dart';
-import 'package:pckt/llm/agent/finance_agent.dart';
-import 'package:pckt/llm/agent/finance_tools.dart';
-import 'package:pckt/llm/ai_categorizer.dart';
-import 'package:pckt/llm/fallback_parser.dart';
-import 'package:pckt/llm/llm_client.dart';
+import 'package:moneytrail/data/db/database.dart';
+import 'package:moneytrail/ingestion/ingestion_service.dart';
+import 'package:moneytrail/ingestion/parser/parsed_txn.dart';
+import 'package:moneytrail/llm/agent/finance_agent.dart';
+import 'package:moneytrail/llm/agent/finance_tools.dart';
+import 'package:moneytrail/llm/ai_categorizer.dart';
+import 'package:moneytrail/llm/fallback_parser.dart';
+import 'package:moneytrail/llm/llm_client.dart';
 
 /// Replays scripted responses and records every request.
 class FakeLlm implements LlmClient {

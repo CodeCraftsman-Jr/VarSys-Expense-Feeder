@@ -3,10 +3,10 @@ import 'dart:convert';
 import 'package:drift/drift.dart' hide isNull, isNotNull;
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:pckt/data/backup/data_export.dart';
-import 'package:pckt/data/db/database.dart';
-import 'package:pckt/ingestion/ingestion_service.dart';
-import 'package:pckt/ingestion/parser/parsed_txn.dart';
+import 'package:moneytrail/data/backup/data_export.dart';
+import 'package:moneytrail/data/db/database.dart';
+import 'package:moneytrail/ingestion/ingestion_service.dart';
+import 'package:moneytrail/ingestion/parser/parsed_txn.dart';
 
 AppDatabase memoryDb() => AppDatabase(DatabaseConnection(NativeDatabase.memory()));
 
@@ -126,6 +126,16 @@ void main() {
       final id = await fresh.addManual(amountMinor: 500, direction: TxnDirection.debit, at: t0, merchant: 'New');
       final before = (await db.select(db.transactions).get()).map((t) => t.id);
       expect(before, isNot(contains(id)));
+    });
+
+    test('writes the MoneyTrail format and still restores a Pckt backup', () async {
+      final m = jsonDecode(await DataExport(db).backupJson()) as Map<String, Object?>;
+      expect(m['format'], 'moneytrail-backup');
+      m['format'] = 'pckt-backup';
+      final fresh = memoryDb();
+      addTearDown(fresh.close);
+      await DataExport(fresh).restore(jsonEncode(m));
+      expect(await dump(fresh), await dump(db));
     });
 
     test('summary counts rows', () async {

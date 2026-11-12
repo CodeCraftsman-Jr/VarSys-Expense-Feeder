@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../core/theme/palette.dart';
 
-/// The Pckt app icon: a white "P" whose bowl holds a mint coin, on the brand
+/// The MoneyTrail app icon: a white "P" whose bowl holds a mint coin, on the brand
 /// gradient. Same geometry and colours as the launcher icon
 /// (tool/gen_brand_assets.js, assets/branding/pckt-icon.svg).
 class BrandMark extends StatelessWidget {

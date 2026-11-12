@@ -143,12 +143,37 @@ class SettingsScreen extends ConsumerWidget {
                 ],
               ),
             ),
+            const SizedBox(height: 20),
+            const SectionHeader('About'),
+            AppCard(
+              padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 8),
+              child: ListTile(
+                leading: const Icon(PhosphorIconsRegular.listBullets),
+                title: const Text('VarSys MoneyTrail'),
+                subtitle: const Text('Based on Pckt by Pritam Ravani. Free software under GPL-3.0.'),
+                trailing: const Icon(PhosphorIconsBold.caretRight, size: 16),
+                onTap: () => showLicensePage(
+                  context: context,
+                  applicationName: 'VarSys MoneyTrail',
+                  applicationLegalese: _legalese,
+                ),
+              ),
+            ),
           ],
         ),
       ),
     );
   }
 }
+
+/// GPL-3.0 section 5 asks modified versions to say they were changed and to
+/// keep the original notices; this text is shown on the licenses page.
+const _legalese =
+    'VarSys MoneyTrail is a modified version of Pckt '
+    '(https://github.com/pritam-ravani/pckt), copyright its original author.\n\n'
+    'This program is free software: you can redistribute it and/or modify it under the terms '
+    'of the GNU General Public License version 3 as published by the Free Software Foundation. '
+    'It comes with no warranty. Source code: https://github.com/CodeCraftsman-Jr/VarSys-Expense-Feeder';
 
 class _SmsCard extends ConsumerWidget {
   const _SmsCard();

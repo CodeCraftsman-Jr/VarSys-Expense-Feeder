@@ -1,11 +1,11 @@
 import 'package:drift/drift.dart' hide isNull, isNotNull;
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:pckt/data/db/database.dart';
-import 'package:pckt/ingestion/categorizer.dart';
-import 'package:pckt/ingestion/parser/parsed_txn.dart';
-import 'package:pckt/ingestion/parser/sms_parser.dart';
-import 'package:pckt/ingestion/parser/text_utils.dart';
+import 'package:moneytrail/data/db/database.dart';
+import 'package:moneytrail/ingestion/categorizer.dart';
+import 'package:moneytrail/ingestion/parser/parsed_txn.dart';
+import 'package:moneytrail/ingestion/parser/sms_parser.dart';
+import 'package:moneytrail/ingestion/parser/text_utils.dart';
 
 /// Regression tests built from real (masked) messages that were mis-parsed.
 ParsedTxn ok(String sender, String body) {
