@@ -3,6 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart';
 import 'package:go_router/go_router.dart';
 
+import 'account/account_providers.dart';
+import 'account/sign_in_gate.dart';
 import 'core/theme/app_theme.dart';
 import 'features/account/sign_in_screen.dart';
 import 'features/activity/activity_screen.dart';
@@ -26,13 +28,15 @@ import 'providers.dart';
 final _routerProvider = Provider<GoRouter>((ref) {
   return GoRouter(
     initialLocation: '/',
-    redirect: (context, state) {
-      final onboarded = ref.read(onboardedProvider);
-      if (!onboarded && state.matchedLocation != '/welcome') return '/welcome';
-      if (onboarded && state.matchedLocation == '/welcome') return '/';
-      return null;
-    },
-    refreshListenable: _ProviderListenable(ref, onboardedProvider),
+    redirect: (context, state) => gateRedirect(
+      location: state.matchedLocation,
+      signedIn: ref.read(accountProvider).signedIn,
+      onboarded: ref.read(onboardedProvider),
+    ),
+    refreshListenable: Listenable.merge([
+      _ProviderListenable(ref, onboardedProvider),
+      _ProviderListenable(ref, accountProvider.select((s) => s.signedIn)),
+    ]),
     routes: [
       GoRoute(path: '/welcome', builder: (_, _) => const OnboardingScreen()),
       GoRoute(
@@ -41,7 +45,7 @@ final _routerProvider = Provider<GoRouter>((ref) {
             MessagesScreen(source: s.uri.queryParameters['source'] == 'email' ? SourceKind.email : SourceKind.sms),
       ),
       GoRoute(path: '/email/connect', builder: (_, _) => const EmailConnectScreen()),
-      GoRoute(path: '/account/sign-in', builder: (_, _) => const SignInScreen()),
+      GoRoute(path: signInPath, builder: (_, _) => const SignInScreen()),
       GoRoute(path: '/llm', builder: (_, _) => const LlmSettingsScreen()),
       GoRoute(path: '/budgets', builder: (_, _) => const BudgetsScreen()),
       GoRoute(path: '/recurring', builder: (_, _) => const RecurringScreen()),

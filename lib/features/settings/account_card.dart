@@ -121,7 +121,7 @@ class AccountCard extends ConsumerWidget {
       context: context,
       builder: (c) => AlertDialog(
         title: const Text('Sign out?'),
-        content: const Text('Transactions on this phone are kept. You can sign in again at any time.'),
+        content: const Text('You will need to sign in again to use MoneyTrail. Transactions on this phone are kept.'),
         actions: [
           TextButton(onPressed: () => Navigator.pop(c, false), child: const Text('Cancel')),
           TextButton(onPressed: () => Navigator.pop(c, true), child: const Text('Sign out')),

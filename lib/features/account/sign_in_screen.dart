@@ -44,11 +44,11 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
     final error = await ref.read(accountProvider.notifier).signIn(email: _email.text, password: _password.text);
     if (!mounted) return;
     if (error == null) {
+      // The router's sign-in gate moves on to onboarding or the app by itself.
       final name = ref.read(accountProvider).profile?.name;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(name == null || name.isEmpty ? 'Signed in' : 'Signed in as $name')),
       );
-      Navigator.of(context).pop();
       return;
     }
     setState(() {
@@ -59,14 +59,20 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final notice = ref.watch(accountProvider.select((s) => s.notice));
     return Scaffold(
-      appBar: AppBar(title: const Text('Sign in')),
+      appBar: AppBar(title: const Text('Sign in to MoneyTrail'), automaticallyImplyLeading: false),
       body: AutofillGroup(
         child: ListView(
           padding: const EdgeInsets.fromLTRB(16, 8, 16, 40),
           children: [
+            if (notice != null) ...[
+              Text(notice, style: context.text.bodyMedium?.copyWith(color: Palette.amber)),
+              const SizedBox(height: 12),
+            ],
             Text(
-              'Use the VarSys account you sign in to Joint Journey with. '
+              'MoneyTrail works with your Joint Journey team, so sign in first. '
+              'Use the VarSys account you use for Joint Journey. '
               'Your password goes only to the VarSys sign-in server.',
               style: context.text.bodyMedium?.copyWith(color: context.colors.onSurfaceVariant),
             ),
