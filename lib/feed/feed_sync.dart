@@ -114,20 +114,15 @@ class FeedSyncController extends Notifier<FeedSyncState> {
     }
   }
 
-  /// Alpha switch for the team feed. Turning it on for the first time counts
-  /// transactions from the first day of the current month.
+  /// Alpha switch for the team feed. The feed is on by default for every
+  /// team, with all SMS history; an alpha can pause it here.
   Future<String?> setTeamFeed(bool enabled) async {
     final token = await ref.read(accountProvider.notifier).token();
     if (token == null) return 'Sign in again.';
     final client = ref.read(jjFeedClientProvider);
     try {
       final current = state.settings ?? await client.settings(token);
-      final now = DateTime.now();
-      final start = '${now.year.toString().padLeft(4, '0')}-${now.month.toString().padLeft(2, '0')}-01';
-      final saved = await client.saveSettings(
-        token,
-        current.copyWith(enabled: enabled, backfillFrom: current.backfillFrom ?? start),
-      );
+      final saved = await client.saveSettings(token, current.copyWith(enabled: enabled));
       if (!ref.mounted) return null;
       state = FeedSyncState(settings: saved, pending: state.pending, lastRun: state.lastRun);
       if (enabled) unawaited(run());

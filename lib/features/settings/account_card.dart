@@ -205,7 +205,7 @@ class _FeedSectionState extends ConsumerState<_FeedSection> {
     final status = feed.running
         ? 'Sending to Joint Journey...'
         : feed.message != null
-        ? feed.message!
+        ? [feed.message!, if ((feed.pending ?? 0) > 0) '${feed.pending} waiting to send.'].join(' ')
         : feed.settings == null
         ? 'Checking the team feed...'
         : [
