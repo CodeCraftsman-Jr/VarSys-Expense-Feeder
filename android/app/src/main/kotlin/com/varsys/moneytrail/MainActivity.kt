@@ -96,6 +96,17 @@ class MainActivity : FlutterFragmentActivity() {
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "moneytrail/device").setMethodCallHandler { call, result ->
             when (call.method) {
                 "profile" -> result.success(deviceProfile())
+                // Phone name and app version, sent when this phone registers for the team feed.
+                "appInfo" -> {
+                    val info = packageManager.getPackageInfo(packageName, 0)
+                    val code = if (Build.VERSION.SDK_INT >= 28) info.longVersionCode else @Suppress("DEPRECATION") info.versionCode.toLong()
+                    result.success(
+                        mapOf(
+                            "label" to listOf(Build.MANUFACTURER, Build.MODEL).filter { it.isNotBlank() }.joinToString(" "),
+                            "version" to "${info.versionName}+$code",
+                        )
+                    )
+                }
                 // True on mobile data or a metered hotspot: big downloads ask first.
                 "isMetered" -> {
                     val cm = getSystemService(CONNECTIVITY_SERVICE) as ConnectivityManager

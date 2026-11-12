@@ -127,9 +127,9 @@ JJ API (apps/api, Next.js)
   storage, and registers it. Every feed call sends `X-Device-Id`; unknown or revoked devices get
   403 `DEVICE_REVOKED` on feed routes.
 - Revoking the device's Better Auth session from JJ needs an auth-service endpoint that revokes a
-  given session for an alpha of the same team. That endpoint is not confirmed to exist; phase 1
-  verifies it and adds it to the auth-service if missing. Until then, revocation covers feed routes
-  only, and the member can sign the device out from their own account.
+  given session for an alpha of the same team. Checked in phase 1 (2026-11-12): it does not exist;
+  Better Auth's `revoke-session` only revokes the caller's own sessions. Until one is added,
+  revocation covers feed routes only, and the member can sign the device out from their own account.
 - Network: `usesCleartextTraffic` off; HTTPS only.
 - 401 handling: the app retries once after 5 s before asking the user to sign in again, because an
   auth-service timeout also returns 401 (`auth.ts` returns null on fetch failure). The outbox
@@ -196,7 +196,9 @@ goes to a third party.
 
 ## 4. Data model (JJ Postgres)
 
-All new tables are JJ-owned in the `ledger` schema, created by explicit migrations (14.1) that also
+All new tables are JJ-owned in the `jointjourney` schema (the `ledger` schema is shared with other
+products; migration 1a shipped there on 2026-11-12 as
+`Joint-Journey/scripts/db-pull/postgres/2026-11-12-feed-devices.sql`), created by explicit migrations (14.1) that also
 enable RLS, write each table's policies, and add the activity trigger where named. They have
 `id bigint generated always as identity` and `team_id text not null` (FK to the auth team table).
 Non-negative money columns use the existing domain `jointjourney.money_amnt`
@@ -204,8 +206,11 @@ Non-negative money columns use the existing domain `jointjourney.money_amnt`
 
 ### 4.1 `feed_devices`
 
-`id`, `team_id`, `user_id`, `device_id` (unique), `label`, `app_version`, `synced_through`,
-`registered_at`, `revoked_at`.
+`id`, `team_id`, `user_id`, `device_id` (unique per team), `label`, `app_version`, `synced_through`,
+`registered_at`, `last_seen_at`, `revoked_at`, `revoked_by`. The app makes a new `device_id` at each
+sign-in and deletes it at sign-out, so a shared phone never carries one member's id into another's
+account, and a revoked phone rejoins only after the member signs in again with their password.
+Devices are revoked, never deleted; a trigger keeps identity columns fixed and revocation permanent.
 
 ### 4.2 `feed_rows`
 

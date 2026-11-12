@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../account/account_providers.dart';
+import '../../account/feed_api.dart';
 import '../../account/varsys_auth.dart';
 import '../../core/theme/icons.dart';
 import '../../core/theme/palette.dart';
@@ -64,6 +65,10 @@ class AccountCard extends ConsumerWidget {
             const SizedBox(height: 10),
             Text(account.notice!, style: context.text.bodySmall?.copyWith(color: Palette.amber)),
           ],
+          if (profile != null && account.device != null && account.device != DeviceStatus.noTeam) ...[
+            const SizedBox(height: 10),
+            _DeviceLine(status: account.device!, message: account.deviceMessage),
+          ],
           const SizedBox(height: 10),
           Text(
             profile == null
@@ -124,5 +129,33 @@ class AccountCard extends ConsumerWidget {
       ),
     );
     if (ok == true) await ref.read(accountProvider.notifier).signOut();
+  }
+}
+
+/// Whether this phone is registered for the team feed.
+class _DeviceLine extends StatelessWidget {
+  const _DeviceLine({required this.status, this.message});
+
+  final DeviceStatus status;
+  final String? message;
+
+  @override
+  Widget build(BuildContext context) {
+    final ok = status == DeviceStatus.registered;
+    final warn = status == DeviceStatus.revoked || status == DeviceStatus.failed;
+    final color = ok ? Palette.mint : warn ? Palette.amber : context.colors.onSurfaceVariant;
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Icon(ok ? PhosphorIconsBold.checkCircle : PhosphorIconsBold.deviceMobile, size: 16, color: color),
+        const SizedBox(width: 8),
+        Expanded(
+          child: Text(
+            ok ? 'This phone is registered with your team.' : (message ?? 'Phone not registered yet.'),
+            style: context.text.bodySmall?.copyWith(color: warn ? color : context.colors.onSurfaceVariant),
+          ),
+        ),
+      ],
+    );
   }
 }

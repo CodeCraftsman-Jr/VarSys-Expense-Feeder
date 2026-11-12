@@ -5,6 +5,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:moneytrail/account/account_providers.dart';
+import 'package:moneytrail/account/feed_api.dart';
 import 'package:moneytrail/account/varsys_auth.dart';
 import 'package:moneytrail/core/secrets.dart';
 import 'package:moneytrail/providers.dart';
@@ -32,6 +33,8 @@ class FakeAuthServer {
   var signInStatus = 200;
   var teamId = 'team-1';
   var role = 'alpha';
+  var feedStatus = 201;
+  String? feedCode;
 
   MockClient get client => MockClient((req) async {
     requests.add(req);
@@ -51,6 +54,9 @@ class FakeAuthServer {
           jsonEncode({'userId': 'u1', 'teamId': teamId, 'role': role, 'email': 'p1@example.com', 'name': 'P One'}),
           200,
         );
+      case '/api/feed/devices':
+        if (feedStatus >= 400) return http.Response(jsonEncode({'code': feedCode}), feedStatus);
+        return http.Response('{"id":1}', feedStatus);
       case '/api/auth/sign-out':
         return http.Response('{"success":true}', 200);
     }
@@ -70,6 +76,8 @@ void main() {
         secretStoreProvider.overrideWithValue(secrets),
         varsysAuthClientProvider.overrideWithValue(VarSysAuthClient(client ?? server.client)),
         unauthorizedRetryDelayProvider.overrideWithValue(Duration.zero),
+        jjFeedClientProvider.overrideWithValue(JjFeedClient(client ?? server.client)),
+        appInfoProvider.overrideWithValue(() async => const AppInfo(label: 'Test Phone', version: '1.0.1+3')),
       ],
     );
     addTearDown(c.dispose);
@@ -190,6 +198,73 @@ void main() {
       final out = server.requests.last;
       expect(out.url.path, '/api/auth/sign-out');
       expect(out.headers['authorization'], 'Bearer signed.token');
+    });
+  });
+
+  group('feed device registration', () {
+    http.Request feedRequest() => server.requests.lastWhere((r) => r.url.path == '/api/feed/devices');
+
+    test('sign-in registers this phone with a fresh device id', () async {
+      final c = await container();
+      await c.read(accountProvider.notifier).signIn(email: 'p1@example.com', password: 'secret');
+      final id = secrets.values[AccountKeys.deviceId]!;
+      expect(id, matches(RegExp(r'^[A-Za-z0-9_-]{16,64}$')));
+      final req = feedRequest();
+      expect(req.url.toString(), 'https://jj-api.varsys.co.in/api/feed/devices');
+      expect(req.headers['authorization'], 'Bearer signed.token');
+      expect(req.headers['x-device-id'], id);
+      expect(jsonDecode(req.body), {'device_id': id, 'label': 'Test Phone', 'app_version': '1.0.1+3'});
+      expect(c.read(accountProvider).device, DeviceStatus.registered);
+    });
+
+    test('sign-out forgets the device id; the next sign-in gets a new one', () async {
+      final c = await container();
+      await c.read(accountProvider.notifier).signIn(email: 'p1@example.com', password: 'secret');
+      final first = secrets.values[AccountKeys.deviceId];
+      await c.read(accountProvider.notifier).signOut();
+      expect(secrets.values.containsKey(AccountKeys.deviceId), isFalse);
+      await c.read(accountProvider.notifier).signIn(email: 'p1@example.com', password: 'secret');
+      expect(secrets.values[AccountKeys.deviceId], isNot(first));
+    });
+
+    test('a revoked phone stays signed in and says why', () async {
+      server
+        ..feedStatus = 403
+        ..feedCode = 'DEVICE_REVOKED';
+      final c = await container();
+      await c.read(accountProvider.notifier).signIn(email: 'p1@example.com', password: 'secret');
+      final s = c.read(accountProvider);
+      expect(s.signedIn, isTrue);
+      expect(s.device, DeviceStatus.revoked);
+      expect(s.deviceMessage, contains('removed this phone'));
+    });
+
+    test('an API without the feed routes reads as unavailable, not an error', () async {
+      server.feedStatus = 404;
+      final c = await container();
+      await c.read(accountProvider.notifier).signIn(email: 'p1@example.com', password: 'secret');
+      expect(c.read(accountProvider).device, DeviceStatus.unavailable);
+    });
+
+    test('no team: nothing is sent to Joint Journey', () async {
+      server.teamId = '';
+      final c = await container();
+      await c.read(accountProvider.notifier).signIn(email: 'p1@example.com', password: 'secret');
+      expect(c.read(accountProvider).device, DeviceStatus.noTeam);
+      expect(server.requests.where((r) => r.url.path == '/api/feed/devices'), isEmpty);
+    });
+
+    test('refresh registers again, so the server sees the app version', () async {
+      final c = await container();
+      await c.read(accountProvider.notifier).signIn(email: 'p1@example.com', password: 'secret');
+      await c.read(accountProvider.notifier).refresh();
+      expect(server.requests.where((r) => r.url.path == '/api/feed/devices'), hasLength(2));
+    });
+
+    test('device ids are URL-safe and 32 characters', () {
+      for (var i = 0; i < 50; i++) {
+        expect(newDeviceId(), matches(RegExp(r'^[A-Za-z0-9_-]{32}$')));
+      }
     });
   });
 }

@@ -114,6 +114,7 @@ abstract final class PhosphorIconsBold {
   static const cloudArrowDown = IconData(0xe1ac, fontFamily: 'PhosphorBold', fontPackage: 'phosphor_flutter');
   static const cpu = IconData(0xe610, fontFamily: 'PhosphorBold', fontPackage: 'phosphor_flutter');
   static const creditCard = IconData(0xe1d2, fontFamily: 'PhosphorBold', fontPackage: 'phosphor_flutter');
+  static const deviceMobile = IconData(0xe1e0, fontFamily: 'PhosphorBold', fontPackage: 'phosphor_flutter');
   static const dotsSixVertical = IconData(0xeae2, fontFamily: 'PhosphorBold', fontPackage: 'phosphor_flutter');
   static const downloadSimple = IconData(0xe20c, fontFamily: 'PhosphorBold', fontPackage: 'phosphor_flutter');
   static const eye = IconData(0xe220, fontFamily: 'PhosphorBold', fontPackage: 'phosphor_flutter');
