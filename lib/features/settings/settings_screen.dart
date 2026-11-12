@@ -10,6 +10,7 @@ import '../../data/db/database.dart';
 import '../../ingestion/email/email_sync.dart';
 import '../../providers.dart';
 import '../../ui/widgets.dart';
+import 'account_card.dart';
 import 'currency_tile.dart';
 import 'data_section.dart';
 import '../budgets/budget_providers.dart';
@@ -36,6 +37,9 @@ class SettingsScreen extends ConsumerWidget {
               padding: const EdgeInsets.only(left: 4, bottom: 12),
               child: Text('Settings', style: context.text.headlineSmall),
             ),
+            const SectionHeader('Joint Journey'),
+            const AccountCard(),
+            const SizedBox(height: 20),
             const SectionHeader('Sources'),
             const _SmsCard(),
             const SizedBox(height: 10),

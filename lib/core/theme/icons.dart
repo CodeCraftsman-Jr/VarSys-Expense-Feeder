@@ -52,6 +52,7 @@ abstract final class PhosphorIconsFill {
   static const trendDown = IconData(0xe4ac, fontFamily: 'PhosphorFill', fontPackage: 'phosphor_flutter');
   static const trendUp = IconData(0xe4ae, fontFamily: 'PhosphorFill', fontPackage: 'phosphor_flutter');
   static const user = IconData(0xe4c2, fontFamily: 'PhosphorFill', fontPackage: 'phosphor_flutter');
+  static const userCircle = IconData(0xe4c4, fontFamily: 'PhosphorFill', fontPackage: 'phosphor_flutter');
   static const wallet = IconData(0xe68a, fontFamily: 'PhosphorFill', fontPackage: 'phosphor_flutter');
   static const warningCircle = IconData(0xe4e2, fontFamily: 'PhosphorFill', fontPackage: 'phosphor_flutter');
   static const wifiHigh = IconData(0xe4ea, fontFamily: 'PhosphorFill', fontPackage: 'phosphor_flutter');
@@ -139,6 +140,7 @@ abstract final class PhosphorIconsBold {
   static const question = IconData(0xe3e8, fontFamily: 'PhosphorBold', fontPackage: 'phosphor_flutter');
   static const receipt = IconData(0xe3ec, fontFamily: 'PhosphorBold', fontPackage: 'phosphor_flutter');
   static const repeat = IconData(0xe3f6, fontFamily: 'PhosphorBold', fontPackage: 'phosphor_flutter');
+  static const signOut = IconData(0xe42a, fontFamily: 'PhosphorBold', fontPackage: 'phosphor_flutter');
   static const sparkle = IconData(0xe6a2, fontFamily: 'PhosphorBold', fontPackage: 'phosphor_flutter');
   static const tag = IconData(0xe478, fontFamily: 'PhosphorBold', fontPackage: 'phosphor_flutter');
   static const wallet = IconData(0xe68a, fontFamily: 'PhosphorBold', fontPackage: 'phosphor_flutter');

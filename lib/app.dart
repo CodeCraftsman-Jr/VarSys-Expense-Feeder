@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/misc.dart';
 import 'package:go_router/go_router.dart';
 
 import 'core/theme/app_theme.dart';
+import 'features/account/sign_in_screen.dart';
 import 'features/activity/activity_screen.dart';
 import 'features/assistant/assistant_screen.dart';
 import 'features/budgets/budgets_screen.dart';
@@ -40,6 +41,7 @@ final _routerProvider = Provider<GoRouter>((ref) {
             MessagesScreen(source: s.uri.queryParameters['source'] == 'email' ? SourceKind.email : SourceKind.sms),
       ),
       GoRoute(path: '/email/connect', builder: (_, _) => const EmailConnectScreen()),
+      GoRoute(path: '/account/sign-in', builder: (_, _) => const SignInScreen()),
       GoRoute(path: '/llm', builder: (_, _) => const LlmSettingsScreen()),
       GoRoute(path: '/budgets', builder: (_, _) => const BudgetsScreen()),
       GoRoute(path: '/recurring', builder: (_, _) => const RecurringScreen()),
