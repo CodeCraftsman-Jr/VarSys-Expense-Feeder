@@ -4,6 +4,7 @@ import 'dart:convert';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../llm/llm_providers.dart' show httpClientProvider;
+import '../feed/feed_sync.dart';
 import '../providers.dart';
 import 'app_info.dart';
 import 'feed_api.dart';
@@ -167,6 +168,8 @@ class AccountNotifier extends Notifier<AccountState> {
       await ref.read(jjFeedClientProvider).registerDevice(token: token, deviceId: id, app: app);
       if (!ref.mounted) return;
       state = state.copyWith(device: DeviceStatus.registered);
+      // Registered: send whatever is waiting (feed_sync.dart).
+      unawaited(ref.read(feedSyncProvider.notifier).run());
     } on FeedApiException catch (e) {
       if (!ref.mounted) return;
       state = state.copyWith(device: e.status, deviceMessage: e.message);

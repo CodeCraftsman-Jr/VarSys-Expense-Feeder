@@ -1,0 +1,267 @@
+import 'dart:convert';
+
+import 'package:drift/drift.dart' hide isNull, isNotNull;
+import 'package:drift/native.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_test/flutter_test.dart';
+import 'package:http/http.dart' as http;
+import 'package:http/testing.dart';
+import 'package:moneytrail/account/account_providers.dart';
+import 'package:moneytrail/account/feed_api.dart';
+import 'package:moneytrail/account/varsys_auth.dart';
+import 'package:moneytrail/core/secrets.dart';
+import 'package:moneytrail/data/db/database.dart';
+import 'package:moneytrail/feed/feed_outbox.dart';
+import 'package:moneytrail/feed/feed_sync.dart';
+import 'package:moneytrail/ingestion/ingestion_service.dart';
+import 'package:moneytrail/ingestion/parser/parsed_txn.dart';
+import 'package:moneytrail/providers.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+
+AppDatabase memoryDb() => AppDatabase(DatabaseConnection(NativeDatabase.memory()));
+
+class MemorySecrets extends SecretStore {
+  final values = <String, String>{};
+  @override
+  Future<String?> read(String key) async => values[key];
+  @override
+  Future<void> write(String key, String? value) async =>
+      value == null || value.isEmpty ? values.remove(key) : values[key] = value;
+  @override
+  Future<void> delete(String key) async => values.remove(key);
+}
+
+final t0 = DateTime(2026, 11, 5, 20, 0);
+
+Future<void> seed(AppDatabase db) async {
+  driftRuntimeOptions.dontWarnAboutMultipleDatabases = true;
+  await IngestionService(db).ingest([
+    RawInput(
+      source: SourceKind.sms,
+      externalId: '101',
+      sender: 'VM-HDFCBK',
+      body: 'Sent Rs.250.00 From HDFC Bank A/C *4521 To SWIGGY On 05/11/26 Ref 528512345678',
+      receivedAt: t0,
+    ),
+    RawInput(
+      source: SourceKind.email,
+      externalId: 'e1',
+      sender: 'alerts@hdfcbank.net',
+      body:
+          'Dear Customer, Rs.250.00 has been debited from account **4521 to VPA swiggy@icici SWIGGY on 05-11-26. '
+          'Your UPI transaction reference number is 528512345678.',
+      receivedAt: t0.add(const Duration(hours: 1)),
+    ),
+    RawInput(
+      source: SourceKind.sms,
+      externalId: '102',
+      sender: 'VM-HDFCBK',
+      body: 'Sent Rs.1200.00 From HDFC Bank A/C *4521 To BIGBASKET On 01/10/26 Ref 528599999999',
+      receivedAt: DateTime(2026, 10, 1, 9),
+    ),
+    RawInput(source: SourceKind.sms, externalId: '103', sender: 'VM-HDFCBK', body: 'Your OTP is 123456', receivedAt: t0),
+  ]);
+  await db.addManual(amountMinor: 5000, direction: TxnDirection.debit, at: t0, merchant: 'Cash tea');
+}
+
+FeedOutbox outboxFor(AppDatabase db, {String app = '1.0.1+3', String install = 'install-A'}) =>
+    FeedOutbox(db, installId: install, appVersion: app, parserVersions: {SourceKind.sms: 4, SourceKind.email: 1});
+
+void main() {
+  group('FeedOutbox', () {
+    late AppDatabase db;
+    setUp(() async {
+      db = memoryDb();
+      await seed(db);
+    });
+    tearDown(() => db.close());
+
+    test('only SMS and email transactions, one row per merged transaction', () async {
+      final p = await outboxFor(db).pending(teamId: 't1');
+      expect(p.pending, 2, reason: 'SMS+email Swiggy merged into one, BigBasket; not the OTP, not the manual entry');
+      final swiggy = p.rows.firstWhere((r) => r.json['amount_minor'] == 25000).json;
+      expect(swiggy['message_ids'], unorderedEquals(['sms:101', 'email:e1']));
+      expect(swiggy['source_kinds'], unorderedEquals(['sms', 'email']));
+      expect(swiggy['occurred_at_source'], 'received');
+      expect(swiggy['direction'], 'debit');
+      expect(swiggy['reference'], '528512345678');
+      expect(swiggy['parser_version'], 4);
+      expect(swiggy['app_version'], '1.0.1+3');
+      expect((swiggy['occurred_at']! as String).endsWith('Z'), isTrue);
+      expect(swiggy['client_message_id'], matches(RegExp(r'^[0-9a-f]{64}$')));
+    });
+
+    test('the id names the messages: same on re-run, different on another phone', () async {
+      final a = (await outboxFor(db).pending(teamId: 't1')).rows.map((r) => r.clientMessageId).toSet();
+      final again = (await outboxFor(db).pending(teamId: 't1')).rows.map((r) => r.clientMessageId).toSet();
+      final otherPhone = (await outboxFor(db, install: 'install-B').pending(teamId: 't1')).rows.map((r) => r.clientMessageId).toSet();
+      expect(again, a);
+      expect(otherPhone.intersection(a), isEmpty);
+      expect(FeedOutbox.clientMessageIdFor('i', ['sms:2', 'email:1']), FeedOutbox.clientMessageIdFor('i', ['email:1', 'sms:2']));
+    });
+
+    test('the backfill date leaves older transactions out', () async {
+      final p = await outboxFor(db).pending(teamId: 't1', from: DateTime(2026, 11, 1));
+      expect(p.pending, 1);
+      expect(p.rows.single.json['amount_minor'], 25000);
+    });
+
+    test('accepted rows leave the outbox; rejected ones come back after an app update', () async {
+      final box = outboxFor(db);
+      final p = await box.pending(teamId: 't1');
+      final txns = {for (final r in p.rows) r.clientMessageId: r.transactionId};
+      await box.record('t1', txns, [
+        FeedRowResult(clientMessageId: p.rows[0].clientMessageId, status: 'accepted', id: 1),
+        FeedRowResult(clientMessageId: p.rows[1].clientMessageId, status: 'rejected', reason: 'bad'),
+      ]);
+      expect((await box.pending(teamId: 't1')).pending, 0);
+      expect((await outboxFor(db, app: '1.0.2+4').pending(teamId: 't1')).rows.single.clientMessageId, p.rows[1].clientMessageId);
+      expect((await box.pending(teamId: 'another-team')).pending, 2, reason: 'uploads are per team');
+    });
+
+    test('limit 0 counts without building rows', () async {
+      final p = await outboxFor(db).pending(teamId: 't1', limit: 0);
+      expect(p.rows, isEmpty);
+      expect(p.pending, 2);
+    });
+  });
+
+  group('FeedSyncController', () {
+    late AppDatabase db;
+    late SharedPreferences prefs;
+    late MemorySecrets secrets;
+    late List<http.Request> requests;
+    late bool feedOn;
+    late int rowsStatus;
+    late bool down;
+
+    http.Client server() => MockClient((req) async {
+      if (down && req.url.host != 'auth.varsys.co.in') throw http.ClientException('network down');
+      requests.add(req);
+      switch (req.url.path) {
+        case '/api/auth/sign-in/email':
+          return http.Response('{"token":"raw"}', 200, headers: {'set-auth-token': 'tok.sig'});
+        case '/api/auth/tenant-context':
+          return http.Response(jsonEncode({'userId': 'u1', 'teamId': 't1', 'role': 'alpha', 'name': 'P'}), 200);
+        case '/api/feed/devices':
+          return http.Response('{"id":1}', 201);
+        case '/api/feed/settings':
+          if (req.method == 'PUT') {
+            feedOn = (jsonDecode(req.body) as Map)['enabled'] == true;
+          }
+          return http.Response(
+            jsonEncode({'enabled': feedOn, 'backfillFrom': '2026-11-01', 'minParserVersion': 0, 'rawTextRetentionDays': 90}),
+            200,
+          );
+        case '/api/feed/rows':
+          if (!feedOn) return http.Response('{"code":"FEED_DISABLED"}', 409);
+          if (rowsStatus != 200) return http.Response('{"code":"DEVICE_REVOKED"}', rowsStatus);
+          final rows = (jsonDecode(req.body) as Map)['rows'] as List;
+          return http.Response(
+            jsonEncode({
+              'results': [
+                for (final (i, r) in rows.indexed) {'client_message_id': (r as Map)['client_message_id'], 'id': i + 1, 'status': 'accepted'},
+              ],
+            }),
+            200,
+          );
+      }
+      return http.Response('', 404);
+    });
+
+    Future<ProviderContainer> signedIn() async {
+      final client = server();
+      final c = ProviderContainer(
+        overrides: [
+          prefsProvider.overrideWithValue(prefs),
+          secretStoreProvider.overrideWithValue(secrets),
+          databaseProvider.overrideWithValue(db),
+          varsysAuthClientProvider.overrideWithValue(VarSysAuthClient(client)),
+          jjFeedClientProvider.overrideWithValue(JjFeedClient(client)),
+          appInfoProvider.overrideWithValue(() async => const AppInfo(label: 'Phone', version: '1.0.1+3')),
+          unauthorizedRetryDelayProvider.overrideWithValue(Duration.zero),
+        ],
+      );
+      addTearDown(c.dispose);
+      await c.read(accountProvider.notifier).signIn(email: 'p@example.com', password: 'x');
+      // Join the upload that registration started.
+      await c.read(feedSyncProvider.notifier).run();
+      return c;
+    }
+
+    setUp(() async {
+      db = memoryDb();
+      await seed(db);
+      SharedPreferences.setMockInitialValues({});
+      prefs = await SharedPreferences.getInstance();
+      secrets = MemorySecrets();
+      requests = [];
+      feedOn = false;
+      rowsStatus = 200;
+      down = false;
+    });
+    tearDown(() => db.close());
+
+    test('feed off: nothing is sent, the count shows what waits', () async {
+      final c = await signedIn();
+      await c.read(feedSyncProvider.notifier).run();
+      final s = c.read(feedSyncProvider);
+      expect(s.feedOn, isFalse);
+      expect(s.pending, 1, reason: 'only the November row is on or after the backfill date');
+      expect(s.message, contains('feed is off'));
+      expect(requests.where((r) => r.url.path == '/api/feed/rows'), isEmpty);
+    });
+
+    test('feed on: sends the waiting rows with the device header, then nothing is left', () async {
+      feedOn = true;
+      final c = await signedIn();
+      final upload = requests.lastWhere((r) => r.url.path == '/api/feed/rows');
+      expect(upload.headers['x-device-id'], secrets.values[AccountKeys.deviceId]);
+      expect(upload.headers['authorization'], 'Bearer tok.sig');
+      expect((jsonDecode(upload.body) as Map)['rows'], hasLength(1));
+      final s = c.read(feedSyncProvider);
+      expect(s.pending, 0);
+      expect(s.sent, 1);
+      await c.read(feedSyncProvider.notifier).run();
+      expect(requests.where((r) => r.url.path == '/api/feed/rows'), hasLength(1), reason: 'nothing left to send');
+    });
+
+    test('an alpha switching the feed on sends straight away', () async {
+      final c = await signedIn();
+      expect(await c.read(feedSyncProvider.notifier).setTeamFeed(true), isNull);
+      await c.read(feedSyncProvider.notifier).run();
+      expect(c.read(feedSyncProvider).pending, 0);
+    });
+
+    test('a removed phone keeps its rows waiting and says why', () async {
+      feedOn = true;
+      rowsStatus = 403;
+      final c = await signedIn();
+      final s = c.read(feedSyncProvider);
+      expect(s.message, contains('removed this phone'));
+      expect(await (db.select(db.feedUploads)).get(), isEmpty);
+    });
+
+    test('offline keeps the rows waiting', () async {
+      feedOn = true;
+      final c = await signedIn();
+      // A new message arrives while offline.
+      await IngestionService(db).ingest([
+        RawInput(
+          source: SourceKind.sms,
+          externalId: '104',
+          sender: 'VM-HDFCBK',
+          body: 'Sent Rs.99.00 From HDFC Bank A/C *4521 To ZOMATO On 06/11/26 Ref 528511111111',
+          receivedAt: t0.add(const Duration(days: 1)),
+        ),
+      ]);
+      down = true;
+      await c.read(feedSyncProvider.notifier).run();
+      expect(c.read(feedSyncProvider).offline, isTrue);
+      expect(c.read(feedSyncProvider).message, contains('connection'));
+      down = false;
+      await c.read(feedSyncProvider.notifier).run();
+      expect(c.read(feedSyncProvider).pending, 0, reason: 'sent once back online');
+    });
+  });
+}

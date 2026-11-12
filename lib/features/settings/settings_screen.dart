@@ -114,8 +114,11 @@ class SettingsScreen extends ConsumerWidget {
                 children: [
                   ListTile(
                     leading: const Icon(PhosphorIconsRegular.shieldCheck),
-                    title: const Text('Stored only on this phone'),
-                    subtitle: const Text('Messages are parsed on-device. Nothing is uploaded.'),
+                    title: const Text('Parsed on this phone'),
+                    subtitle: const Text(
+                      'Message text never leaves the phone. While your team feed is on, each parsed '
+                      'transaction (amount, date, bank, mode, merchant) goes to Joint Journey.',
+                    ),
                   ),
                   const DataExportTiles(),
                   ListTile(

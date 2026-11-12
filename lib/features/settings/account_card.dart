@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:intl/intl.dart';
 
 import '../../account/account_providers.dart';
 import '../../account/feed_api.dart';
 import '../../account/varsys_auth.dart';
 import '../../core/theme/icons.dart';
+import '../../feed/feed_sync.dart';
 import '../../core/theme/palette.dart';
 import '../../ui/widgets.dart';
 
@@ -69,11 +71,15 @@ class AccountCard extends ConsumerWidget {
             const SizedBox(height: 10),
             _DeviceLine(status: account.device!, message: account.deviceMessage),
           ],
+          if (profile != null && account.device == DeviceStatus.registered) ...[
+            const SizedBox(height: 10),
+            _FeedSection(isAlpha: profile.role == TeamRole.alpha),
+          ],
           const SizedBox(height: 10),
           Text(
             profile == null
                 ? 'Sign in to link this phone to your Joint Journey team. Transactions stay on this phone until the team feed is switched on.'
-                : 'Transactions stay on this phone until the team feed is switched on.',
+                : 'Bank transactions go to your Joint Journey team while the team feed is on.',
             style: muted,
           ),
           const SizedBox(height: 14),
@@ -155,6 +161,89 @@ class _DeviceLine extends StatelessWidget {
             style: context.text.bodySmall?.copyWith(color: warn ? color : context.colors.onSurfaceVariant),
           ),
         ),
+      ],
+    );
+  }
+}
+
+/// Team feed status for this phone: on or off, how many transactions were
+/// sent and how many wait, Send now, and (alpha only) the team switch.
+class _FeedSection extends ConsumerStatefulWidget {
+  const _FeedSection({required this.isAlpha});
+
+  final bool isAlpha;
+
+  @override
+  ConsumerState<_FeedSection> createState() => _FeedSectionState();
+}
+
+class _FeedSectionState extends ConsumerState<_FeedSection> {
+  var _saving = false;
+
+  @override
+  void initState() {
+    super.initState();
+    // Settings and counts are only known after a run; start one if none yet.
+    if (ref.read(feedSyncProvider).lastRun == null) {
+      Future.microtask(() => ref.read(feedSyncProvider.notifier).run());
+    }
+  }
+
+  Future<void> _toggle(bool on) async {
+    setState(() => _saving = true);
+    final error = await ref.read(feedSyncProvider.notifier).setTeamFeed(on);
+    if (!mounted) return;
+    setState(() => _saving = false);
+    if (error != null) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(error)));
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final feed = ref.watch(feedSyncProvider);
+    final muted = context.text.bodySmall?.copyWith(color: context.colors.onSurfaceVariant);
+    final from = feed.settings?.backfillStart;
+    final status = feed.running
+        ? 'Sending to Joint Journey...'
+        : feed.message != null
+        ? feed.message!
+        : feed.settings == null
+        ? 'Checking the team feed...'
+        : [
+            'Team feed is on${from == null ? '' : ', from ${DateFormat('d MMM yyyy').format(from)}'}.',
+            if (feed.pending != null) feed.pending == 0 ? 'Everything is sent.' : '${feed.pending} waiting to send.',
+          ].join(' ');
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Icon(
+              feed.feedOn ? PhosphorIconsBold.cloudArrowUp : PhosphorIconsBold.cloudSlash,
+              size: 16,
+              color: feed.message != null && feed.feedOn ? Palette.amber : context.colors.onSurfaceVariant,
+            ),
+            const SizedBox(width: 8),
+            Expanded(child: Text(status, style: muted)),
+          ],
+        ),
+        if (widget.isAlpha && feed.settings != null)
+          SwitchListTile(
+            contentPadding: EdgeInsets.zero,
+            title: const Text('Team feed'),
+            subtitle: const Text('Members\' phones send bank transactions to Joint Journey'),
+            value: feed.feedOn,
+            onChanged: _saving ? null : _toggle,
+          ),
+        if (feed.feedOn)
+          Align(
+            alignment: Alignment.centerLeft,
+            child: TextButton.icon(
+              onPressed: feed.running ? null : () => ref.read(feedSyncProvider.notifier).run(),
+              icon: const Icon(PhosphorIconsBold.paperPlaneTilt, size: 16),
+              label: const Text('Send now'),
+            ),
+          ),
       ],
     );
   }

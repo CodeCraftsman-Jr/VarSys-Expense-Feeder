@@ -115,6 +115,77 @@ class JjFeedClient {
     };
   }
 
+  /// The team's feed settings (any member may read them).
+  Future<FeedSettings> settings(String token) async {
+    final res = await _call(() => _http.get(_base.resolve('/api/feed/settings'), headers: _auth(token)));
+    return FeedSettings.fromJson(_json(res));
+  }
+
+  /// Saves the team's feed settings. Alpha only; others get 403.
+  Future<FeedSettings> saveSettings(String token, FeedSettings s) async {
+    final res = await _call(
+      () => _http.put(
+        _base.resolve('/api/feed/settings'),
+        headers: {..._auth(token), 'content-type': 'application/json'},
+        body: jsonEncode(s.toJson()),
+      ),
+    );
+    return FeedSettings.fromJson(_json(res));
+  }
+
+  /// Sends up to 100 rows; returns the server's per-row answers as raw maps.
+  Future<List<Map<String, Object?>>> uploadRows({
+    required String token,
+    required String deviceId,
+    required List<Map<String, Object?>> rows,
+  }) async {
+    final res = await _call(
+      () => _http.post(
+        _base.resolve('/api/feed/rows'),
+        headers: {..._auth(token), 'content-type': 'application/json', 'x-device-id': deviceId},
+        body: jsonEncode({'rows': rows}),
+      ),
+      timeout: const Duration(seconds: 45),
+    );
+    final results = _json(res)['results'];
+    return [for (final r in (results as List? ?? const [])) (r as Map).cast<String, Object?>()];
+  }
+
+  Map<String, String> _auth(String token) => {'authorization': 'Bearer $token'};
+
+  Future<http.Response> _call(Future<http.Response> Function() send, {Duration? timeout}) async {
+    final http.Response res;
+    try {
+      res = await send().timeout(timeout ?? this.timeout);
+    } on TimeoutException {
+      throw const FeedHttpException(0, 'offline', 'Joint Journey did not answer. Check your connection.');
+    } on SocketException {
+      throw const FeedHttpException(0, 'offline', "Can't reach Joint Journey. Check your connection.");
+    } on http.ClientException {
+      throw const FeedHttpException(0, 'offline', "Can't reach Joint Journey. Check your connection.");
+    } on HandshakeException {
+      throw const FeedHttpException(0, 'offline', 'Secure connection to Joint Journey failed.');
+    }
+    if (res.statusCode >= 200 && res.statusCode < 300) return res;
+    final code = _code(res);
+    throw FeedHttpException(res.statusCode, code, switch ((res.statusCode, code)) {
+      (409, 'FEED_DISABLED') => 'Your team feed is off. An alpha can switch it on.',
+      (403, 'DEVICE_REVOKED') => 'An alpha removed this phone from the team feed.',
+      (403, 'NO_TEAM') => 'This account is not in a team.',
+      (403, _) => 'Only an alpha can change this.',
+      (401, _) => 'Joint Journey did not accept the session.',
+      (404, _) => 'Joint Journey does not accept phones yet.',
+      (429, _) => 'Joint Journey is busy. Trying again later.',
+      (final s, _) => 'Joint Journey returned an error ($s).',
+    });
+  }
+
+  static Map<String, Object?> _json(http.Response res) {
+    final body = jsonDecode(res.body);
+    if (body is Map) return body.cast<String, Object?>();
+    throw const FeedHttpException(0, 'bad_reply', 'Unexpected reply from Joint Journey.');
+  }
+
   static String? _code(http.Response res) {
     try {
       final body = jsonDecode(res.body);
@@ -124,4 +195,59 @@ class JjFeedClient {
     }
     return null;
   }
+}
+
+/// A failed settings or upload call. [status] is the HTTP status (0 when the
+/// server was not reached); [code] the API's stable code, or `offline`.
+class FeedHttpException implements Exception {
+  const FeedHttpException(this.status, this.code, this.message);
+  final int status;
+  final String? code;
+  final String message;
+
+  bool get offline => status == 0;
+
+  @override
+  String toString() => message;
+}
+
+/// The team's feed settings (feed plan 4.10). Funding rules are fixed in code.
+class FeedSettings {
+  const FeedSettings({
+    required this.enabled,
+    this.backfillFrom,
+    this.minParserVersion = 0,
+    this.rawTextRetentionDays = 90,
+  });
+
+  final bool enabled;
+
+  /// First day whose transactions count, in the team's calendar (yyyy-mm-dd).
+  final String? backfillFrom;
+  final int minParserVersion;
+  final int rawTextRetentionDays;
+
+  /// [backfillFrom] as local midnight, for filtering the outbox.
+  DateTime? get backfillStart => backfillFrom == null ? null : DateTime.tryParse(backfillFrom!);
+
+  factory FeedSettings.fromJson(Map<String, Object?> j) => FeedSettings(
+    enabled: j['enabled'] == true,
+    backfillFrom: j['backfillFrom'] as String?,
+    minParserVersion: (j['minParserVersion'] as num?)?.toInt() ?? 0,
+    rawTextRetentionDays: (j['rawTextRetentionDays'] as num?)?.toInt() ?? 90,
+  );
+
+  Map<String, Object?> toJson() => {
+    'enabled': enabled,
+    'backfill_from': backfillFrom,
+    'min_parser_version': minParserVersion,
+    'raw_text_retention_days': rawTextRetentionDays,
+  };
+
+  FeedSettings copyWith({bool? enabled, String? backfillFrom}) => FeedSettings(
+    enabled: enabled ?? this.enabled,
+    backfillFrom: backfillFrom ?? this.backfillFrom,
+    minParserVersion: minParserVersion,
+    rawTextRetentionDays: rawTextRetentionDays,
+  );
 }

@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:ui' show PlatformDispatcher;
 
 import 'package:flutter/material.dart';
@@ -12,6 +13,7 @@ import 'ingestion/parser/email_parser.dart';
 import 'ingestion/parser/sms_parser.dart';
 import 'ingestion/share/share_intake.dart';
 import 'ingestion/sms/sms_source.dart';
+import 'feed/feed_sync.dart';
 
 // ------------------------------------------------------------------ infra
 
@@ -213,6 +215,8 @@ class SmsSyncController extends Notifier<SmsSyncState> {
       await _prefs.setInt(PrefKeys.smsLastSync, started.millisecondsSinceEpoch);
       await _prefs.setInt(PrefKeys.smsParserVersion, smsParserVersion);
       state = state.copyWith(running: false, lastSync: started, lastReport: report);
+      // New bank messages: send them to Joint Journey when the team feed is on.
+      unawaited(ref.read(feedSyncProvider.notifier).run());
       return report;
     } catch (e, st) {
       debugPrint('SMS sync failed: $e\n$st');

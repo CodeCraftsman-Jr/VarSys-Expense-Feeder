@@ -33,7 +33,7 @@ extension TxnMoney on Transaction {
   bool get isForeign => currency != Currencies.home;
 }
 
-@DriftDatabase(tables: [Accounts, Categories, Transactions, RawMessages, MerchantRules, Budgets])
+@DriftDatabase(tables: [Accounts, Categories, Transactions, RawMessages, MerchantRules, Budgets, FeedUploads])
 class AppDatabase extends _$AppDatabase {
   /// Without an [executor], opens the SQLCipher-encrypted `moneytrail.sqlite`
   /// (migrating a plaintext one first) — see [openAppDatabase].
@@ -43,7 +43,7 @@ class AppDatabase extends _$AppDatabase {
   static const protectedCategories = {'Transfers', 'Other'};
 
   @override
-  int get schemaVersion => 4;
+  int get schemaVersion => 5;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -76,6 +76,8 @@ class AppDatabase extends _$AppDatabase {
         await _addColumnIfMissing(m, accounts, accounts.currency);
         await _addColumnIfMissing(m, budgets, budgets.currency);
       }
+      // v5: Joint Journey feed upload state.
+      if (from < 5) await m.createTable(feedUploads);
     },
     beforeOpen: (details) async {
       await customStatement('PRAGMA foreign_keys = ON');

@@ -222,9 +222,18 @@ Devices are revoked, never deleted; a trigger keeps identity columns fixed and r
 `parser_version`, `private`, `event_id` (FK `feed_events`, added in migration 2b), `status`,
 `received_at`.
 
-`client_message_id` = sha256 of the sorted `message_ids` plus the device id. It identifies the
-messages, so it survives `resetSource` and parser upgrades. Unique `(team_id, device_id,
-client_message_id)`. Its only job is to make retransmission harmless.
+`client_message_id` = sha256 of the sorted `message_ids` plus a random per-install id (kept across
+sign-outs, never sent on its own). It identifies the messages, so it survives `resetSource` and
+parser upgrades, and two phones of one member never collide. Unique `(team_id, user_id,
+client_message_id)`: the device id changes at every sign-in, so keying on it would re-upload a
+member's history after each sign-in. Its only job is to make retransmission harmless.
+
+Shipped 2026-11-12 (migration `2026-11-12-feed-rows.sql`): amounts are stored as exact
+`amount_minor` plus ISO `currency` (money_amnt is numeric(12,2) and would round three-decimal
+currencies; conversion happens at write-through); `transfer_hint` carries the phone's transfer flag
+until `transfer_kind` is extracted; `raw_text`, `private` and the team view arrive with the
+raw-text and privacy slice. The phone keeps no separate outbox queue: the outbox is every SMS or
+email transaction without an upload record for the team (`lib/feed/feed_outbox.dart`).
 
 Mutable columns, and only these: `status`, `event_id`, `private` (through an annotation),
 `raw_text` (purge only). Everything else is fixed after insert.
