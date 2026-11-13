@@ -122,7 +122,7 @@ class SettingsScreen extends ConsumerWidget {
                   ),
                   const DataExportTiles(),
                   ListTile(
-                    leading: const Icon(PhosphorIconsRegular.trash, color: Palette.coral),
+                    leading: const Icon(PhosphorIconsRegular.trash, color: Palette.red),
                     title: const Text('Reset imported data'),
                     subtitle: const Text('Clears transactions & messages; keeps categories and rules'),
                     onTap: () async {
@@ -201,10 +201,10 @@ class _SmsCard extends ConsumerWidget {
               Container(
                 padding: const EdgeInsets.all(10),
                 decoration: BoxDecoration(
-                  color: Palette.mint.withValues(alpha: 0.15),
+                  color: Palette.brand.withValues(alpha: 0.15),
                   borderRadius: BorderRadius.circular(14),
                 ),
-                child: const Icon(PhosphorIconsFill.chatText, color: Palette.mint),
+                child: const Icon(PhosphorIconsFill.chatText, color: Palette.brand),
               ),
               const SizedBox(width: 14),
               Expanded(
@@ -232,7 +232,7 @@ class _SmsCard extends ConsumerWidget {
           ),
           if (sync.error != null) ...[
             const SizedBox(height: 10),
-            Text(sync.error!, style: context.text.bodySmall?.copyWith(color: Palette.coral)),
+            Text(sync.error!, style: context.text.bodySmall?.copyWith(color: Palette.red)),
           ],
           if (stats.isNotEmpty) ...[
             const SizedBox(height: 14),
@@ -243,7 +243,7 @@ class _SmsCard extends ConsumerWidget {
                 InfoPill(
                   icon: PhosphorIconsBold.checkCircle,
                   label: '${stats[ParseStatus.parsed] ?? 0} parsed',
-                  color: Palette.mint,
+                  color: Palette.green,
                 ),
                 InfoPill(icon: PhosphorIconsBold.gitMerge, label: '${stats[ParseStatus.merged] ?? 0} merged'),
                 InfoPill(icon: PhosphorIconsBold.eyeSlash, label: '${stats[ParseStatus.ignored] ?? 0} ignored'),

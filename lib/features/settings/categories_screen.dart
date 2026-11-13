@@ -258,7 +258,7 @@ class _CategoryEditorState extends ConsumerState<_CategoryEditor> {
           if (c != null && !_protected) ...[
             const SizedBox(height: 8),
             TextButton.icon(
-              style: TextButton.styleFrom(foregroundColor: Palette.coral),
+              style: TextButton.styleFrom(foregroundColor: Palette.red),
               onPressed: _delete,
               icon: const Icon(PhosphorIconsRegular.trash),
               label: const Text('Delete category'),
@@ -329,7 +329,7 @@ class _MoveToDialogState extends State<_MoveToDialog> {
     actions: [
       TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
       TextButton(
-        style: TextButton.styleFrom(foregroundColor: Palette.coral),
+        style: TextButton.styleFrom(foregroundColor: Palette.red),
         onPressed: () => Navigator.pop(context, _target),
         child: const Text('Delete'),
       ),

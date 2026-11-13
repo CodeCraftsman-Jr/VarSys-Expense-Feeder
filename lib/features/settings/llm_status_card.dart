@@ -31,10 +31,10 @@ class LlmStatusCard extends ConsumerWidget {
               Container(
                 padding: const EdgeInsets.all(10),
                 decoration: BoxDecoration(
-                  color: Palette.violet.withValues(alpha: 0.15),
+                  color: Palette.brand.withValues(alpha: 0.15),
                   borderRadius: BorderRadius.circular(14),
                 ),
-                child: const Icon(PhosphorIconsFill.sparkle, color: Palette.violet),
+                child: const Icon(PhosphorIconsFill.sparkle, color: Palette.brand),
               ),
               const SizedBox(width: 14),
               Expanded(
@@ -84,7 +84,7 @@ class LlmStatusCard extends ConsumerWidget {
               Text(
                 jobs.error ?? jobs.lastResult!,
                 style: context.text.bodySmall?.copyWith(
-                  color: jobs.error != null ? Palette.coral : context.colors.onSurfaceVariant,
+                  color: jobs.error != null ? Palette.red : context.colors.onSurfaceVariant,
                 ),
               ),
             ],
@@ -129,6 +129,6 @@ class _Flag extends StatelessWidget {
   Widget build(BuildContext context) => InfoPill(
     icon: on ? PhosphorIconsBold.checkCircle : PhosphorIconsBold.minusCircle,
     label: label,
-    color: on ? Palette.mint : null,
+    color: on ? Palette.green : null,
   );
 }

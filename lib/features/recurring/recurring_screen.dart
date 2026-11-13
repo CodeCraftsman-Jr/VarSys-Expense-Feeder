@@ -76,11 +76,7 @@ class _TotalCard extends StatelessWidget {
   Widget build(BuildContext context) => Container(
     decoration: BoxDecoration(
       borderRadius: BorderRadius.circular(28),
-      gradient: const LinearGradient(
-        colors: Palette.heroGradient,
-        begin: Alignment.topLeft,
-        end: Alignment.bottomRight,
-      ),
+      color: Palette.brandDeep,
     ),
     padding: const EdgeInsets.fromLTRB(22, 20, 22, 20),
     child: Column(
@@ -167,7 +163,7 @@ class _RecurringTile extends StatelessWidget {
               InfoPill(
                 icon: PhosphorIconsBold.calendarBlank,
                 label: overdue ? 'Expected ${dayLabel(r.next)}' : 'Next ${_nextLabel(r.next)}',
-                color: overdue ? Palette.amber : Palette.violet,
+                color: overdue ? Palette.amber : Palette.brand,
               ),
             ],
           ),

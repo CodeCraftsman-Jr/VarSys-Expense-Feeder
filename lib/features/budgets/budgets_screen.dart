@@ -57,7 +57,7 @@ class BudgetsScreen extends ConsumerWidget {
               onTap: () => showBudgetEditor(context, ref),
               child: Row(
                 children: [
-                  const Icon(PhosphorIconsFill.target, color: Palette.violet),
+                  const Icon(PhosphorIconsFill.target, color: Palette.brand),
                   const SizedBox(width: 12),
                   Expanded(child: Text('Set an overall monthly budget', style: context.text.titleSmall)),
                   const Icon(PhosphorIconsBold.plus, size: 18),
@@ -73,10 +73,10 @@ class BudgetsScreen extends ConsumerWidget {
                 width: 44,
                 height: 44,
                 decoration: BoxDecoration(
-                  color: Palette.violet.withValues(alpha: context.isDark ? 0.18 : 0.14),
+                  color: Palette.brand.withValues(alpha: context.isDark ? 0.18 : 0.14),
                   borderRadius: BorderRadius.circular(15),
                 ),
-                child: const Icon(PhosphorIconsFill.target, color: Palette.violet),
+                child: const Icon(PhosphorIconsFill.target, color: Palette.brand),
               ),
               onTap: () => showBudgetEditor(context, ref, existing: overallBudget),
             ),
@@ -212,7 +212,7 @@ class _BudgetTile extends StatelessWidget {
                     Text(
                       paceLabel(p),
                       style: context.text.bodySmall?.copyWith(
-                        color: p.remainingMinor < 0 ? Palette.coral : context.colors.onSurfaceVariant,
+                        color: p.remainingMinor < 0 ? Palette.red : context.colors.onSurfaceVariant,
                       ),
                     ),
                   ] else
@@ -370,7 +370,7 @@ class _BudgetEditorState extends ConsumerState<_BudgetEditor> {
             if (widget.existing != null) ...[
               const SizedBox(height: 8),
               TextButton.icon(
-                style: TextButton.styleFrom(foregroundColor: Palette.coral),
+                style: TextButton.styleFrom(foregroundColor: Palette.red),
                 onPressed: () async {
                   await ref.read(databaseProvider).deleteBudget(widget.existing!.id);
                   if (context.mounted) Navigator.pop(context);

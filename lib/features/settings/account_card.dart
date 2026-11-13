@@ -149,7 +149,7 @@ class _DeviceLine extends StatelessWidget {
   Widget build(BuildContext context) {
     final ok = status == DeviceStatus.registered;
     final warn = status == DeviceStatus.revoked || status == DeviceStatus.failed;
-    final color = ok ? Palette.mint : warn ? Palette.amber : context.colors.onSurfaceVariant;
+    final color = ok ? Palette.green : warn ? Palette.amber : context.colors.onSurfaceVariant;
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [

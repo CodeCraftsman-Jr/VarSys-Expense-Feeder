@@ -192,9 +192,9 @@ class TransactionSheet extends ConsumerWidget {
         const SizedBox(height: 20),
         OutlinedButton.icon(
           style: OutlinedButton.styleFrom(
-            foregroundColor: Palette.coral,
+            foregroundColor: Palette.red,
             minimumSize: const Size.fromHeight(50),
-            side: BorderSide(color: Palette.coral.withValues(alpha: 0.4)),
+            side: BorderSide(color: Palette.red.withValues(alpha: 0.4)),
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
           ),
           onPressed: () async {
@@ -302,7 +302,7 @@ class _SourceCard extends StatelessWidget {
                 const SizedBox(width: 8),
                 Expanded(child: Text(message.sender, style: context.text.labelLarge)),
                 if (message.parseStatus == ParseStatus.merged)
-                  const InfoPill(icon: PhosphorIconsBold.gitMerge, label: 'merged', color: Palette.mint),
+                  const InfoPill(icon: PhosphorIconsBold.gitMerge, label: 'merged', color: Palette.green),
               ],
             ),
             const SizedBox(height: 8),

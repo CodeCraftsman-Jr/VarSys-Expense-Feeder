@@ -130,7 +130,7 @@ Future<void> _restore(BuildContext context, WidgetRef ref) async {
         TextButton(onPressed: () => Navigator.pop(c, false), child: const Text('Cancel')),
         TextButton(
           onPressed: () => Navigator.pop(c, true),
-          style: TextButton.styleFrom(foregroundColor: Palette.coral),
+          style: TextButton.styleFrom(foregroundColor: Palette.red),
           child: const Text('Replace'),
         ),
       ],

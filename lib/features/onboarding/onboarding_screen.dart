@@ -137,7 +137,7 @@ class _Point extends StatelessWidget {
     padding: const EdgeInsets.only(bottom: 12),
     child: Row(
       children: [
-        Icon(icon, color: Palette.mint, size: 22),
+        Icon(icon, color: Palette.brand, size: 22),
         const SizedBox(width: 12),
         Expanded(child: Text(text, style: context.text.bodyMedium)),
       ],
@@ -160,7 +160,6 @@ class _Hero extends StatelessWidget {
           color: context.colors.surfaceContainer,
           borderRadius: BorderRadius.circular(20),
           border: Border.all(color: context.colors.outlineVariant),
-          boxShadow: [BoxShadow(color: color.withValues(alpha: 0.25), blurRadius: 24, offset: const Offset(0, 8))],
         ),
         child: Icon(icon, color: color, size: 30),
       ),
@@ -172,22 +171,10 @@ class _Hero extends StatelessWidget {
       child: Stack(
         clipBehavior: Clip.none,
         children: [
-          Positioned(
-            left: 40,
-            top: 0,
-            child: Container(
-              width: 150,
-              height: 150,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                gradient: RadialGradient(colors: [Palette.violet.withValues(alpha: 0.45), Colors.transparent]),
-              ),
-            ),
-          ),
           Positioned(left: 0, top: 50, child: tile(PhosphorIconsFill.forkKnife, Palette.categories[1], -0.12)),
           Positioned(left: 78, top: 10, child: tile(PhosphorIconsFill.lightning, Palette.categories[0], 0.08)),
           Positioned(left: 156, top: 58, child: tile(PhosphorIconsFill.shoppingBag, Palette.categories[4], 0.14)),
-          Positioned(left: 232, top: 14, child: tile(PhosphorIconsFill.trendUp, Palette.mint, -0.06)),
+          Positioned(left: 232, top: 14, child: tile(PhosphorIconsFill.trendUp, Palette.green, -0.06)),
         ],
       ),
     );

@@ -78,32 +78,16 @@ class _LockScreenState extends ConsumerState<LockScreen> {
     final s = ref.watch(appLockProvider);
     final text = Theme.of(context).textTheme;
     return Material(
-      color: Palette.ink,
+      color: Palette.brandNavy,
       child: DecoratedBox(
-        decoration: const BoxDecoration(
-          gradient: RadialGradient(
-            center: Alignment(0.2, -0.45),
-            radius: 1.1,
-            colors: [Color(0xFF1E1A3E), Palette.ink],
-          ),
-        ),
+        decoration: const BoxDecoration(color: Palette.brandNavy),
         child: SafeArea(
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 32),
             child: Column(
               children: [
                 const Spacer(flex: 3),
-                Container(
-                  width: 112,
-                  height: 112,
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(32),
-                    boxShadow: [
-                      BoxShadow(color: Palette.violet.withValues(alpha: 0.35), blurRadius: 48, spreadRadius: 2),
-                    ],
-                  ),
-                  child: const BrandMark(size: 112),
-                ),
+                const BrandMark(size: 112),
                 const SizedBox(height: 28),
                 Text('MoneyTrail is locked', style: text.headlineSmall?.copyWith(color: Colors.white)),
                 const SizedBox(height: 8),
@@ -114,12 +98,12 @@ class _LockScreenState extends ConsumerState<LockScreen> {
                 ),
                 if (s.message != null) ...[
                   const SizedBox(height: 14),
-                  Text(s.message!, style: text.bodySmall?.copyWith(color: Palette.coral)),
+                  Text(s.message!, style: text.bodySmall?.copyWith(color: Palette.red)),
                 ],
                 const Spacer(flex: 4),
                 FilledButton.icon(
                   style: FilledButton.styleFrom(
-                    backgroundColor: Palette.violet,
+                    backgroundColor: Palette.brandLight,
                     foregroundColor: Colors.white,
                     minimumSize: const Size.fromHeight(52),
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),

@@ -47,7 +47,7 @@ class SecurityCard extends ConsumerWidget {
             builder: (context, status, _) => ListTile(
               leading: Icon(
                 status.encrypted ? PhosphorIconsRegular.lockSimple : PhosphorIconsRegular.warningCircle,
-                color: status.encrypted ? Palette.mint : Palette.amber,
+                color: status.encrypted ? Palette.green : Palette.amber,
               ),
               title: Text(status.encrypted ? 'Database encrypted' : 'Database not encrypted'),
               subtitle: Text(

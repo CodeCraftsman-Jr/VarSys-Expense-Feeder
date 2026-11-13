@@ -11,9 +11,9 @@ import 'budget_providers.dart';
 
 /// Bar color: the budget's own color until 80%, amber to 100%, coral past it.
 Color budgetColor(BudgetProgress p, {Color? normal}) => switch (p.level) {
-  BudgetLevel.over => Palette.coral,
+  BudgetLevel.over => Palette.red,
   BudgetLevel.warning => Palette.amber,
-  BudgetLevel.ok => normal ?? (p.category == null ? Palette.violet : Color(p.category!.color)),
+  BudgetLevel.ok => normal ?? (p.category == null ? Palette.brand : Color(p.category!.color)),
 };
 
 class BudgetBar extends StatelessWidget {
@@ -71,7 +71,7 @@ class BudgetCard extends ConsumerWidget {
         onTap: () => context.push('/budgets'),
         child: Row(
           children: [
-            const Icon(PhosphorIconsFill.target, color: Palette.violet),
+            const Icon(PhosphorIconsFill.target, color: Palette.brand),
             const SizedBox(width: 12),
             Expanded(
               child: Text(
@@ -131,7 +131,7 @@ class BudgetCard extends ConsumerWidget {
             Text(
               paceLabel(overall),
               style: context.text.bodySmall?.copyWith(
-                color: overall.remainingMinor < 0 ? Palette.coral : context.colors.onSurfaceVariant,
+                color: overall.remainingMinor < 0 ? Palette.red : context.colors.onSurfaceVariant,
                 fontWeight: FontWeight.w600,
               ),
             ),

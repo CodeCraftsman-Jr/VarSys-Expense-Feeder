@@ -1,10 +1,10 @@
 // Run: node tool/gen_brand_assets.js
 //
-// One geometry for the Pckt mark — a "P" whose bowl is a pocket holding a
-// mint coin — written out as
+// One geometry for the VarSys mark (the "V" with a notch, as in
+// VarSys-Landing/public/favicon.svg) written out as
 //   * SVG sources in assets/branding/ (the reference artwork),
 //   * Android vector drawables (adaptive foreground, monochrome themed-icon
-//     layer, notification small icon) and a gradient background drawable,
+//     layer, notification small icon) and a flat navy background drawable,
 //   * PNGs for legacy launcher icons, the splash, iOS AppIcon (default, dark,
 //     tinted) and the iOS launch image,
 //   * previews on light and dark home screens in assets/branding/previews/.
@@ -20,40 +20,39 @@ const root = path.join(__dirname, '..');
 // ------------------------------------------------------------- palette
 const hex = (h) => [parseInt(h.slice(1, 3), 16), parseInt(h.slice(3, 5), 16), parseInt(h.slice(5, 7), 16)];
 const C = {
-  ink: '#0B0C10', paper: '#F6F6F2', violet: '#8B7CF6', mint: '#3DDC97',
-  // Background: a lifted take on Palette.heroGradient (#6D5DF6 → #3B2FB8 →
-  // #1E1A5E), so the icon reads on both light and dark wallpapers.
-  bgA: '#8B7CF6', bgB: '#5B4BE0', bgC: '#2A2380',
-  markLight: '#FFFFFF',
-  // Dark (iOS) variant: violet mark on the system's dark backdrop.
-  darkA: '#A99DFF', darkB: '#7A6BF7',
+  // Page colours for previews: Palette.ink (zinc-950) / Palette.paper (slate-50).
+  ink: '#09090B', paper: '#F8FAFC',
+  // VarSys mark: blue V on the navy tile of the web favicon.
+  navy: '#0B1220', blue: '#3D7BFF', notch: '#9DBBFF',
+  // Dark (iOS) variant: the system draws its own dark backdrop.
+  darkV: '#5B8FFF', darkNotch: '#B5CBFF',
 };
 
 // ------------------------------------------------------------ geometry
-// Unit square = the 108dp adaptive-icon canvas. The safe zone is the
-// centred circle of diameter 66/108 (r = 0.3056); every point of the mark
-// stays inside r ≈ 0.28.
-const G = {
-  stemX: 0.383, top: 0.305, bottom: 0.705, bowlBottom: 0.535,
-  bowlCx: 0.497, bowlR: 0.115, stroke: 0.082, coinR: 0.043,
-};
-G.cy = (G.top + G.bowlBottom) / 2;
+// The favicon draws the mark on a 64-unit grid: the V
+// (10,14)(22,14)(32,34)(42,14)(54,14)(32,54) and a notch triangle
+// (27,14)(37,14)(32,24). Mapped into the unit square (the 108dp
+// adaptive-icon canvas) centred on the circle through its three tips, so
+// every point stays inside r = 0.28 (safe zone r = 0.3056).
+const MARK_K = 0.688, MARK_CY = 27.95;
+const u = ([x, y]) => [0.5 + (x - 32) / 64 * MARK_K, 0.5 + (y - MARK_CY) / 64 * MARK_K];
+const V_POLY = [[10, 14], [22, 14], [32, 34], [42, 14], [54, 14], [32, 54]].map(u);
+const NOTCH_POLY = [[27, 14], [37, 14], [32, 24]].map(u);
 
-function segDist(px, py, ax, ay, bx, by) {
-  const dx = bx - ax, dy = by - ay;
-  const t = Math.max(0, Math.min(1, ((px - ax) * dx + (py - ay) * dy) / (dx * dx + dy * dy)));
-  return Math.hypot(px - (ax + t * dx), py - (ay + t * dy));
+// Signed distance to a simple polygon (negative inside).
+function polyDist(px, py, poly) {
+  let d = Infinity, inside = false;
+  for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) {
+    const [ax, ay] = poly[j], [bx, by] = poly[i];
+    const ex = bx - ax, ey = by - ay, wx = px - ax, wy = py - ay;
+    const t = Math.max(0, Math.min(1, (wx * ex + wy * ey) / (ex * ex + ey * ey)));
+    d = Math.min(d, Math.hypot(wx - ex * t, wy - ey * t));
+    if ((ay > py) !== (by > py) && px < ax + (py - ay) * ex / ey) inside = !inside;
+  }
+  return inside ? -d : d;
 }
-function pDist(x, y) {
-  let d = Math.min(
-    segDist(x, y, G.stemX, G.top, G.stemX, G.bottom),
-    segDist(x, y, G.stemX, G.top, G.bowlCx, G.top),
-    segDist(x, y, G.stemX, G.bowlBottom, G.bowlCx, G.bowlBottom),
-  );
-  if (x >= G.bowlCx) d = Math.min(d, Math.abs(Math.hypot(x - G.bowlCx, y - G.cy) - G.bowlR));
-  return d - G.stroke / 2;
-}
-const coinDist = (x, y) => Math.hypot(x - G.bowlCx, y - G.cy) - G.coinR;
+const vDist = (x, y) => polyDist(x, y, V_POLY);
+const notchDist = (x, y) => polyDist(x, y, NOTCH_POLY);
 function roundRectDist(x, y, r) {
   const qx = Math.abs(x - 0.5) - (0.5 - r), qy = Math.abs(y - 0.5) - (0.5 - r);
   return Math.hypot(Math.max(qx, 0), Math.max(qy, 0)) + Math.min(Math.max(qx, qy), 0) - r;
@@ -62,27 +61,21 @@ function roundRectDist(x, y, r) {
 const squircleDist = (x, y) => (Math.pow(Math.abs(x - 0.5) / 0.5, 4) + Math.pow(Math.abs(y - 0.5) / 0.5, 4)) - 1;
 
 // ---------------------------------------------------------------- SVG
-function markPath(s = 1, ox = 0, oy = 0) {
-  const X = (v) => +(ox + v * s).toFixed(3), Y = (v) => +(oy + v * s).toFixed(3);
-  return `M${X(G.stemX)} ${Y(G.bottom)}V${Y(G.top)}H${X(G.bowlCx)}A${+(G.bowlR * s).toFixed(3)} ${+(G.bowlR * s).toFixed(3)} 0 0 1 ${X(G.bowlCx)} ${Y(G.bowlBottom)}H${X(G.stemX)}`;
+function polyPath(poly, s = 1, ox = 0, oy = 0) {
+  return 'M' + poly.map(([x, y]) => `${+(ox + x * s).toFixed(3)} ${+(oy + y * s).toFixed(3)}`).join('L') + 'Z';
 }
-function svgIcon({ bg = true, mark = C.markLight, markGradient = null, coin = C.mint, size = 1024 } = {}) {
+function svgIcon({ bg = true, mark = C.blue, notch = C.notch, size = 1024 } = {}) {
   const s = size;
-  const defs = [
-    bg ? `<linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="${C.bgA}"/><stop offset="0.55" stop-color="${C.bgB}"/><stop offset="1" stop-color="${C.bgC}"/></linearGradient>` : '',
-    markGradient ? `<linearGradient id="mark" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${markGradient[0]}"/><stop offset="1" stop-color="${markGradient[1]}"/></linearGradient>` : '',
-  ].join('');
   return `<svg xmlns="http://www.w3.org/2000/svg" width="${s}" height="${s}" viewBox="0 0 ${s} ${s}">
-  <defs>${defs}</defs>
-  ${bg ? `<rect width="${s}" height="${s}" fill="url(#bg)"/>` : ''}
-  <path d="${markPath(s)}" fill="none" stroke="${markGradient ? 'url(#mark)' : mark}" stroke-width="${(G.stroke * s).toFixed(2)}" stroke-linecap="round" stroke-linejoin="round"/>
-  <circle cx="${(G.bowlCx * s).toFixed(2)}" cy="${(G.cy * s).toFixed(2)}" r="${(G.coinR * s).toFixed(2)}" fill="${coin}"/>
+  ${bg ? `<rect width="${s}" height="${s}" fill="${C.navy}"/>` : ''}
+  <path d="${polyPath(V_POLY, s)}" fill="${mark}"/>
+  <path d="${polyPath(NOTCH_POLY, s)}" fill="${notch}"/>
 </svg>
 `;
 }
 
 // ------------------------------------------------- Android vector drawables
-function vectorDrawable(dp, viewport, color, { scale = 1, comment = '' } = {}) {
+function vectorDrawable(dp, viewport, color, { scale = 1, comment = '', notchColor = color } = {}) {
   // Mark scaled about the canvas centre.
   const s = viewport * scale, o = (viewport - s) / 2;
   return `<?xml version="1.0" encoding="utf-8"?>
@@ -93,14 +86,11 @@ function vectorDrawable(dp, viewport, color, { scale = 1, comment = '' } = {}) {
     android:viewportWidth="${viewport}"
     android:viewportHeight="${viewport}">
     <path
-        android:pathData="${markPath(s, o, o)}"
-        android:strokeColor="${color}"
-        android:strokeWidth="${(G.stroke * s).toFixed(3)}"
-        android:strokeLineCap="round"
-        android:strokeLineJoin="round" />
-    <path
         android:fillColor="${color}"
-        android:pathData="M${(o + G.bowlCx * s - G.coinR * s).toFixed(3)} ${(o + G.cy * s).toFixed(3)}a${(G.coinR * s).toFixed(3)} ${(G.coinR * s).toFixed(3)} 0 1 0 ${(2 * G.coinR * s).toFixed(3)} 0a${(G.coinR * s).toFixed(3)} ${(G.coinR * s).toFixed(3)} 0 1 0 ${(-2 * G.coinR * s).toFixed(3)} 0z" />
+        android:pathData="${polyPath(V_POLY, s, o, o)}" />
+    <path
+        android:fillColor="${notchColor}"
+        android:pathData="${polyPath(NOTCH_POLY, s, o, o)}" />
 </vector>
 `;
 }
@@ -108,21 +98,18 @@ function vectorDrawable(dp, viewport, color, { scale = 1, comment = '' } = {}) {
 // ------------------------------------------------------------- raster
 const mix = (a, b, t) => a.map((v, i) => v + (b[i] - v) * t);
 const cover = (d, px) => Math.max(0, Math.min(1, 0.5 - d / px));
-function gradient3(t, a, b, c) {
-  t = Math.max(0, Math.min(1, t));
-  return t < 0.55 ? mix(hex(a), hex(b), t / 0.55) : mix(hex(b), hex(c), (t - 0.55) / 0.45);
-}
 
 /**
  * opts.shape: 'none' | 'square' | 'round' | 'roundrect' | 'squircle'
- * opts.bg: 'brand' | [r,g,b] (shape fill)
- * opts.mark: 'light' | 'violet' | [r,g,b]; opts.coin: [r,g,b]
+ * opts.bg: [r,g,b] shape fill (default: VarSys navy)
+ * opts.mark / opts.notch: [r,g,b] (default: VarSys blue / light blue)
  * opts.scale: mark size factor about the centre
  * opts.canvas: [r,g,b] opaque page colour behind everything (previews)
  */
 function render(size, o = {}) {
   const shape = o.shape ?? 'none', scale = o.scale ?? 1;
   const px = 1 / size, ss = 3;
+  const bgc = o.bg ?? hex(C.navy), markCol = o.mark ?? hex(C.blue), notchCol = o.notch ?? hex(C.notch);
   const buf = Buffer.alloc(size * size * 4);
   for (let j = 0; j < size; j++) {
     for (let i = 0; i < size; i++) {
@@ -141,15 +128,11 @@ function render(size, o = {}) {
               : shape === 'round' ? Math.hypot(x - 0.5, y - 0.5) - 0.5
               : shape === 'squircle' ? squircleDist(x, y) * 0.125
               : roundRectDist(x, y, 0.22);
-            const bgc = o.bg === 'brand' || o.bg === undefined ? gradient3((x + y) / 2, C.bgA, C.bgB, C.bgC) : o.bg;
             over(bgc, cover(d, px / 1.2));
           }
           const mx = (x - 0.5) / scale + 0.5, my = (y - 0.5) / scale + 0.5;
-          const markCol = o.mark === 'violet'
-            ? mix(hex(C.darkA), hex(C.darkB), Math.max(0, Math.min(1, (my - G.top) / (G.bottom - G.top))))
-            : Array.isArray(o.mark) ? o.mark : hex(C.markLight);
-          over(markCol, cover(pDist(mx, my) * scale, px / 1.2));
-          over(o.coin ?? hex(C.mint), cover(coinDist(mx, my) * scale, px / 1.2));
+          over(markCol, cover(vDist(mx, my) * scale, px / 1.2));
+          over(notchCol, cover(notchDist(mx, my) * scale, px / 1.2));
           acc = [acc[0] + rgb[0] * a, acc[1] + rgb[1] * a, acc[2] + rgb[2] * a, acc[3] + a];
         }
       }
@@ -223,26 +206,26 @@ function compose(w, h, pageRgb, items) {
 
 // ============================================================= outputs
 // SVG sources
-out('assets/branding/pckt-icon.svg', svgIcon());
-out('assets/branding/pckt-icon-dark.svg', svgIcon({ bg: false, markGradient: [C.darkA, C.darkB] }));
-out('assets/branding/pckt-icon-monochrome.svg', svgIcon({ bg: false, mark: '#FFFFFF', coin: '#FFFFFF' }));
+for (const old of ['pckt-icon.svg', 'pckt-icon-dark.svg', 'pckt-icon-monochrome.svg']) {
+  const f = path.join(root, 'assets/branding', old);
+  if (fs.existsSync(f)) fs.unlinkSync(f);
+}
+out('assets/branding/varsys-icon.svg', svgIcon());
+out('assets/branding/varsys-icon-dark.svg', svgIcon({ bg: false, mark: C.darkV, notch: C.darkNotch }));
+out('assets/branding/varsys-icon-monochrome.svg', svgIcon({ bg: false, mark: '#FFFFFF', notch: '#FFFFFF' }));
 
 // Android
 const res = 'android/app/src/main/res';
 const FG_SCALE = 0.95; // adaptive foreground: keeps the mark inside r ≈ 0.28
-out(`${res}/drawable/ic_launcher_foreground.xml`, vectorDrawable(108, 108, C.markLight, { scale: FG_SCALE, comment: 'Adaptive icon foreground (108dp, mark inside the 66dp safe zone).' })
-  .replace(/(<path\s+android:fillColor=")#FFFFFF/, `$1${C.mint}`));
+out(`${res}/drawable/ic_launcher_foreground.xml`, vectorDrawable(108, 108, C.blue, { scale: FG_SCALE, notchColor: C.notch, comment: 'Adaptive icon foreground (108dp, mark inside the 66dp safe zone).' }));
 out(`${res}/drawable/ic_launcher_monochrome.xml`, vectorDrawable(108, 108, '#FFFFFFFF', { scale: FG_SCALE, comment: 'Android 13+ themed icon: the launcher tints this alpha mask.' }));
-out(`${res}/drawable/ic_stat_pckt.xml`, vectorDrawable(24, 24, '#FFFFFFFF', { scale: 1.45, comment: 'Notification small icon: white on transparent; the system tints it.' }));
+const oldStat = path.join(root, res, 'drawable/ic_stat_pckt.xml');
+if (fs.existsSync(oldStat)) fs.unlinkSync(oldStat);
+out(`${res}/drawable/ic_stat_varsys.xml`, vectorDrawable(24, 24, '#FFFFFFFF', { scale: 1.45, comment: 'Notification small icon: white on transparent; the system tints it.' }));
 out(`${res}/drawable/ic_launcher_background.xml`, `<?xml version="1.0" encoding="utf-8"?>
-<!-- GENERATED by tool/gen_brand_assets.js. Adaptive icon background: brand gradient. -->
+<!-- GENERATED by tool/gen_brand_assets.js. Adaptive icon background: VarSys navy. -->
 <shape xmlns:android="http://schemas.android.com/apk/res/android" android:shape="rectangle">
-    <gradient
-        android:angle="315"
-        android:startColor="${C.bgA}"
-        android:centerColor="${C.bgB}"
-        android:endColor="${C.bgC}"
-        android:type="linear" />
+    <solid android:color="${C.navy}" />
 </shape>
 `);
 const densities = { mdpi: 1, hdpi: 1.5, xhdpi: 2, xxhdpi: 3, xxxhdpi: 4 };
@@ -251,7 +234,7 @@ for (const [d, k] of Object.entries(densities)) {
   writePng(`${res}/mipmap-${d}/ic_launcher.png`, 48 * k, { shape: 'roundrect', scale: 1.35 });
   writePng(`${res}/mipmap-${d}/ic_launcher_round.png`, 48 * k, { shape: 'round', scale: 1.35 });
   // Splash: Android 12+ shows a 288dp icon masked to a 192dp circle; here
-  // a brand-gradient disc (Ø 180dp) with the mark, readable on the light
+  // a navy disc (Ø 180dp) with the mark, readable on the light
   // and the dark splash background. Also centred on the pre-12 window.
   const sz = 288 * k;
   // Draw the disc by rendering the round icon at 180/288 and placing it.
@@ -277,9 +260,9 @@ for (const f of fs.readdirSync(path.join(root, appicon))) {
 // iOS masks the corners itself and rejects default icons with alpha.
 writePng(`${appicon}/AppIcon-1024.png`, 1024, { shape: 'square', scale: 1.25 }, true);
 // Dark: transparent background, the system draws its own dark backdrop.
-writePng(`${appicon}/AppIcon-1024-dark.png`, 1024, { mark: 'violet', scale: 1.25 });
+writePng(`${appicon}/AppIcon-1024-dark.png`, 1024, { mark: hex(C.darkV), notch: hex(C.darkNotch), scale: 1.25 });
 // Tinted: grayscale; the system applies the user's tint.
-writePng(`${appicon}/AppIcon-1024-tinted.png`, 1024, { shape: 'square', bg: [0, 0, 0], mark: [255, 255, 255], coin: [170, 170, 170], scale: 1.25 }, true);
+writePng(`${appicon}/AppIcon-1024-tinted.png`, 1024, { shape: 'square', bg: [0, 0, 0], mark: [255, 255, 255], notch: [170, 170, 170], scale: 1.25 }, true);
 out(`${appicon}/Contents.json`, JSON.stringify({
   images: [
     { filename: 'AppIcon-1024.png', idiom: 'universal', platform: 'ios', size: '1024x1024' },
@@ -314,6 +297,6 @@ homeScreen('icon_on_light', C.paper, brand);
 homeScreen('icon_on_dark', C.ink, brand);
 // Themed (monochrome) icons as Android 13+ renders them: tinted background
 // with the mark in the accent tone.
-homeScreen('themed_on_light', C.paper, { shape: 'squircle', bg: hex('#DCE2F9'), mark: hex('#2B3A67'), coin: hex('#2B3A67'), scale: FG_SCALE * 1.5 });
-homeScreen('themed_on_dark', C.ink, { shape: 'squircle', bg: hex('#2B3A67'), mark: hex('#DCE2F9'), coin: hex('#DCE2F9'), scale: FG_SCALE * 1.5 });
-homeScreen('ios_dark_variant', '#000000', { shape: 'squircle', bg: hex('#1C1C1E'), mark: 'violet', scale: 1.25 });
+homeScreen('themed_on_light', C.paper, { shape: 'squircle', bg: hex('#DCE2F9'), mark: hex('#2B3A67'), notch: hex('#2B3A67'), scale: FG_SCALE * 1.5 });
+homeScreen('themed_on_dark', C.ink, { shape: 'squircle', bg: hex('#2B3A67'), mark: hex('#DCE2F9'), notch: hex('#DCE2F9'), scale: FG_SCALE * 1.5 });
+homeScreen('ios_dark_variant', '#000000', { shape: 'squircle', bg: hex('#1C1C1E'), mark: hex(C.darkV), notch: hex(C.darkNotch), scale: 1.25 });

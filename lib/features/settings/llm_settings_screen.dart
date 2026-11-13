@@ -182,7 +182,7 @@ class _LlmSettingsScreenState extends ConsumerState<LlmSettingsScreen> {
               child: InfoPill(
                 icon: PhosphorIconsBold.checkCircle,
                 label: 'Using ${config.preset.label} · ${config.model}',
-                color: Palette.mint,
+                color: Palette.green,
               ),
             ),
           const SectionHeader('Provider'),
@@ -289,7 +289,7 @@ class _LlmSettingsScreenState extends ConsumerState<LlmSettingsScreen> {
                     Icon(
                       _testResult!.$1 ? PhosphorIconsBold.checkCircle : PhosphorIconsFill.warningCircle,
                       size: 18,
-                      color: _testResult!.$1 ? Palette.mint : Palette.coral,
+                      color: _testResult!.$1 ? Palette.green : Palette.red,
                     ),
                     const SizedBox(width: 8),
                     Expanded(child: Text(_testResult!.$2, style: context.text.bodySmall)),
@@ -369,7 +369,7 @@ class _LlmSettingsScreenState extends ConsumerState<LlmSettingsScreen> {
                 _key.clear();
                 if (mounted) _snack('Disconnected and key deleted');
               },
-              style: TextButton.styleFrom(foregroundColor: Palette.coral),
+              style: TextButton.styleFrom(foregroundColor: Palette.red),
               icon: const Icon(PhosphorIconsRegular.trash),
               label: const Text('Disconnect & delete key'),
             ),

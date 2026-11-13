@@ -204,13 +204,9 @@ class EmptyState extends StatelessWidget {
           height: 88,
           decoration: BoxDecoration(
             shape: BoxShape.circle,
-            gradient: LinearGradient(
-              colors: [Palette.violet.withValues(alpha: 0.28), Palette.mint.withValues(alpha: 0.18)],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-            ),
+            color: Palette.brand.withValues(alpha: 0.15),
           ),
-          child: Icon(icon, size: 40, color: Palette.violet),
+          child: Icon(icon, size: 40, color: Palette.brand),
         ),
         const SizedBox(height: 20),
         Text(title, style: context.text.titleLarge, textAlign: TextAlign.center),

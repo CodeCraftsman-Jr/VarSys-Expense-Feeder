@@ -26,14 +26,7 @@ class HeroCard extends StatelessWidget {
     return Container(
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(28),
-        gradient: const LinearGradient(
-          colors: Palette.heroGradient,
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        boxShadow: [
-          BoxShadow(color: Palette.violet.withValues(alpha: 0.25), blurRadius: 30, offset: const Offset(0, 12)),
-        ],
+        color: Palette.brandDeep,
       ),
       padding: const EdgeInsets.fromLTRB(22, 22, 22, 16),
       child: Column(
@@ -60,7 +53,7 @@ class HeroCard extends StatelessWidget {
             spacing: 8,
             runSpacing: 8,
             children: [
-              _Pill(icon: PhosphorIconsBold.arrowDownLeft, label: 'In ${money(stats.income)}', tint: Palette.mint),
+              _Pill(icon: PhosphorIconsBold.arrowDownLeft, label: 'In ${money(stats.income)}', tint: Palette.green),
               _Pill(icon: PhosphorIconsBold.calendarBlank, label: '${money(perDay)}/day', tint: Colors.white),
               _Pill(icon: PhosphorIconsBold.receipt, label: '${stats.count} spends', tint: Colors.white),
             ],
@@ -136,7 +129,7 @@ class _DailyBars extends StatelessWidget {
                   width: 5,
                   borderRadius: const BorderRadius.vertical(top: Radius.circular(4)),
                   color: i + 1 == today
-                      ? Palette.mint
+                      ? Palette.brandDark
                       : today != null && i + 1 > today
                       ? Colors.white.withValues(alpha: 0.12)
                       : Colors.white.withValues(alpha: 0.55),

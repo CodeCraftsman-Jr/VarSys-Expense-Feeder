@@ -66,7 +66,7 @@ class EmailSourceCard extends ConsumerWidget {
           ),
           if (sync.error != null) ...[
             const SizedBox(height: 10),
-            Text(sync.error!, style: context.text.bodySmall?.copyWith(color: Palette.coral)),
+            Text(sync.error!, style: context.text.bodySmall?.copyWith(color: Palette.red)),
           ],
           if (sync.running) ...[const SizedBox(height: 12), const LinearProgressIndicator(minHeight: 3)],
           if (stats.isNotEmpty) ...[
@@ -78,7 +78,7 @@ class EmailSourceCard extends ConsumerWidget {
                 InfoPill(
                   icon: PhosphorIconsBold.checkCircle,
                   label: '${stats[ParseStatus.parsed] ?? 0} parsed',
-                  color: Palette.mint,
+                  color: Palette.green,
                 ),
                 InfoPill(icon: PhosphorIconsBold.gitMerge, label: '${stats[ParseStatus.merged] ?? 0} merged'),
                 InfoPill(icon: PhosphorIconsBold.eyeSlash, label: '${stats[ParseStatus.ignored] ?? 0} ignored'),

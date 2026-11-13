@@ -2,9 +2,9 @@ import 'package:flutter/material.dart';
 
 import '../core/theme/palette.dart';
 
-/// The MoneyTrail app icon: a white "P" whose bowl holds a mint coin, on the brand
-/// gradient. Same geometry and colours as the launcher icon
-/// (tool/gen_brand_assets.js, assets/branding/pckt-icon.svg).
+/// The VarSys mark as the app icon draws it: a blue "V" with a light notch on
+/// the VarSys navy tile. Same geometry and colours as the launcher icon
+/// (tool/gen_brand_assets.js, assets/branding/varsys-icon.svg).
 class BrandMark extends StatelessWidget {
   const BrandMark({super.key, this.size = 96});
   final double size;
@@ -20,46 +20,28 @@ class BrandMark extends StatelessWidget {
 }
 
 class _MarkPainter extends CustomPainter {
-  // Unit-square geometry, shared with the icon generator.
-  static const stemX = 0.383, top = 0.305, bottom = 0.705, bowlBottom = 0.535;
-  static const bowlCx = 0.497, bowlR = 0.115, stroke = 0.082, coinR = 0.043;
+  // The favicon's 64-unit grid, mapped into the unit square the same way as
+  // the icon generator (centred on the circle through the three tips).
+  static const _k = 0.688, _cy = 27.95;
+  static const _blue = Color(0xFF3D7BFF), _notch = Color(0xFF9DBBFF);
+
+  static Offset _u(double x, double y) => Offset(0.5 + (x - 32) / 64 * _k, 0.5 + (y - _cy) / 64 * _k);
+
+  static Path _poly(List<Offset> pts) => Path()..addPolygon(pts, true);
 
   @override
   void paint(Canvas canvas, Size size) {
-    final rect = Offset.zero & size;
-    canvas.drawRect(
-      rect,
-      Paint()
-        ..shader = const LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [Color(0xFF8B7CF6), Color(0xFF5B4BE0), Color(0xFF2A2380)],
-          stops: [0, 0.55, 1],
-        ).createShader(rect),
-    );
+    canvas.drawRect(Offset.zero & size, Paint()..color = Palette.brandNavy);
     canvas.save();
     // Like the launcher, which shows the inner 72dp of the 108dp canvas.
     canvas.translate(size.width / 2, size.height / 2);
     canvas.scale(size.shortestSide * 1.4);
     canvas.translate(-0.5, -0.5);
-
-    const cy = (top + bowlBottom) / 2;
-    final p = Path()
-      ..moveTo(stemX, bottom)
-      ..lineTo(stemX, top)
-      ..lineTo(bowlCx, top)
-      ..arcToPoint(const Offset(bowlCx, bowlBottom), radius: const Radius.circular(bowlR))
-      ..lineTo(stemX, bowlBottom);
     canvas.drawPath(
-      p,
-      Paint()
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = stroke
-        ..strokeCap = StrokeCap.round
-        ..strokeJoin = StrokeJoin.round
-        ..color = Colors.white,
+      _poly([_u(10, 14), _u(22, 14), _u(32, 34), _u(42, 14), _u(54, 14), _u(32, 54)]),
+      Paint()..color = _blue,
     );
-    canvas.drawCircle(const Offset(bowlCx, cy), coinR, Paint()..color = Palette.mint);
+    canvas.drawPath(_poly([_u(27, 14), _u(37, 14), _u(32, 24)]), Paint()..color = _notch);
     canvas.restore();
   }
 

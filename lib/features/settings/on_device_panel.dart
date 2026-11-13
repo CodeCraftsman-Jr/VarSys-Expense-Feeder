@@ -53,7 +53,7 @@ class OnDeviceModelPanel extends ConsumerWidget {
               children: [
                 const Padding(
                   padding: EdgeInsets.only(top: 2),
-                  child: Icon(PhosphorIconsFill.sparkle, size: 14, color: Palette.violet),
+                  child: Icon(PhosphorIconsFill.sparkle, size: 14, color: Palette.brand),
                 ),
                 const SizedBox(width: 8),
                 Expanded(child: Text(n, style: context.text.bodySmall)),
@@ -63,7 +63,7 @@ class OnDeviceModelPanel extends ConsumerWidget {
         if (s.error != null)
           Padding(
             padding: const EdgeInsets.only(top: 8),
-            child: Text(s.error!, style: context.text.bodySmall?.copyWith(color: Palette.coral)),
+            child: Text(s.error!, style: context.text.bodySmall?.copyWith(color: Palette.red)),
           ),
         const SizedBox(height: 12),
         const SectionHeader('Models'),
@@ -284,17 +284,17 @@ class _ModelCardState extends ConsumerState<_ModelCard> {
     final o = widget.option;
     final m = o.model;
     final (badge, color) = switch (o.fit) {
-      ModelFit.recommended => ('Recommended', Palette.mint),
-      ModelFit.fits => ('Fits', Palette.violet),
+      ModelFit.recommended => ('Recommended', Palette.green),
+      ModelFit.fits => ('Fits', Palette.brand),
       ModelFit.tight => ('Tight fit', Palette.amber),
-      ModelFit.tooLarge => ('Too large', Palette.coral),
-      ModelFit.noStorage => ('Not enough space', Palette.coral),
+      ModelFit.tooLarge => ('Too large', Palette.red),
+      ModelFit.noStorage => ('Not enough space', Palette.red),
       ModelFit.needsNpuBuild => ('NPU build only', Palette.neutral),
       ModelFit.wrongChip || ModelFit.unsupported => ('Unsupported', Palette.neutral),
     };
     return AppCard(
       padding: const EdgeInsets.all(16),
-      color: widget.active ? Palette.mint.withValues(alpha: context.isDark ? 0.10 : 0.08) : null,
+      color: widget.active ? Palette.green.withValues(alpha: context.isDark ? 0.10 : 0.08) : null,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -302,7 +302,7 @@ class _ModelCardState extends ConsumerState<_ModelCard> {
             children: [
               Expanded(child: Text(m.name, style: context.text.titleMedium)),
               if (widget.active)
-                const InfoPill(icon: PhosphorIconsBold.checkCircle, label: 'In use', color: Palette.mint)
+                const InfoPill(icon: PhosphorIconsBold.checkCircle, label: 'In use', color: Palette.green)
               else
                 InfoPill(icon: PhosphorIconsBold.cpu, label: badge, color: color),
             ],
@@ -377,7 +377,7 @@ class _ModelCardState extends ConsumerState<_ModelCard> {
           IconButton(
             tooltip: 'Delete',
             onPressed: widget.busy ? null : widget.onDelete,
-            icon: const Icon(PhosphorIconsRegular.trash, color: Palette.coral),
+            icon: const Icon(PhosphorIconsRegular.trash, color: Palette.red),
           ),
         ],
       );

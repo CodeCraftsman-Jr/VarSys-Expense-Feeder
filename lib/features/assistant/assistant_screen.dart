@@ -70,7 +70,7 @@ class _AssistantScreenState extends ConsumerState<AssistantScreen> {
               padding: const EdgeInsets.fromLTRB(20, 16, 8, 4),
               child: Row(
                 children: [
-                  const Icon(PhosphorIconsFill.sparkle, color: Palette.violet),
+                  const Icon(PhosphorIconsFill.sparkle, color: Palette.brand),
                   const SizedBox(width: 10),
                   Expanded(child: Text('Ask MoneyTrail', style: context.text.headlineSmall)),
                   if (chat.entries.isNotEmpty)
@@ -156,7 +156,7 @@ class _Intro extends StatelessWidget {
         children: [
           for (final s in _suggestions)
             ActionChip(
-              avatar: const Icon(PhosphorIconsBold.sparkle, size: 16, color: Palette.violet),
+              avatar: const Icon(PhosphorIconsBold.sparkle, size: 16, color: Palette.brand),
               label: Text(s),
               onPressed: () => onPick(s),
             ),
@@ -175,11 +175,11 @@ class _Bubble extends StatelessWidget {
     final mine = entry.role == ChatRole.user;
     final error = entry.role == ChatRole.error;
     final bg = mine
-        ? Palette.violet
+        ? Palette.brand
         : error
-        ? Palette.coral.withValues(alpha: 0.12)
+        ? Palette.red.withValues(alpha: 0.12)
         : context.colors.surfaceContainerHigh;
-    final fg = mine ? Colors.white : (error ? Palette.coral : context.colors.onSurface);
+    final fg = mine ? Colors.white : (error ? Palette.red : context.colors.onSurface);
     final style = context.text.bodyMedium?.copyWith(color: fg, height: 1.4);
 
     return Padding(
@@ -230,7 +230,7 @@ class _ActivityChips extends StatelessWidget {
     runSpacing: 6,
     children: [
       for (final a in activity)
-        InfoPill(icon: _toolIcon(a.tool), label: a.summary, color: a.isError ? Palette.coral : null),
+        InfoPill(icon: _toolIcon(a.tool), label: a.summary, color: a.isError ? Palette.red : null),
     ],
   );
 }

@@ -108,7 +108,7 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
             ),
             if (_error != null) ...[
               const SizedBox(height: 12),
-              Text(_error!, style: context.text.bodySmall?.copyWith(color: Palette.coral)),
+              Text(_error!, style: context.text.bodySmall?.copyWith(color: Palette.red)),
             ],
             const SizedBox(height: 20),
             FilledButton(

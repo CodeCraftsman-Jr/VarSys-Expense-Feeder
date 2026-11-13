@@ -78,14 +78,14 @@ class InsightsScreen extends ConsumerWidget {
                   tint: change == null
                       ? null
                       : change > 0
-                      ? Palette.coral
-                      : Palette.mint,
+                      ? Palette.red
+                      : Palette.green,
                 ),
                 _StatTile(
                   icon: PhosphorIconsFill.piggyBank,
                   label: 'Net saved',
                   value: moneyCompact(cur.net),
-                  tint: cur.net >= 0 ? Palette.mint : Palette.coral,
+                  tint: cur.net >= 0 ? Palette.green : Palette.red,
                 ),
                 _StatTile(
                   icon: PhosphorIconsFill.crown,
@@ -134,9 +134,9 @@ class InsightsScreen extends ConsumerWidget {
                   Row(
                     children: [
                       const SizedBox(width: 8),
-                      _LegendDot(color: Palette.violet, label: 'Spent'),
+                      _LegendDot(color: Palette.brand, label: 'Spent'),
                       const SizedBox(width: 16),
-                      _LegendDot(color: Palette.mint, label: 'Income'),
+                      _LegendDot(color: Palette.green, label: 'Income'),
                     ],
                   ),
                   const SizedBox(height: 16),
@@ -199,7 +199,7 @@ class _LinkTile extends StatelessWidget {
     onTap: onTap,
     child: Row(
       children: [
-        Icon(icon, size: 22, color: Palette.violet),
+        Icon(icon, size: 22, color: Palette.brand),
         const SizedBox(width: 10),
         Expanded(
           child: Column(
@@ -234,7 +234,7 @@ class _StatTile extends StatelessWidget {
     child: Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Icon(icon, size: 22, color: tint ?? Palette.violet),
+        Icon(icon, size: 22, color: tint ?? Palette.brand),
         const Spacer(),
         Text(
           value,
@@ -334,13 +334,13 @@ class _TrendChart extends StatelessWidget {
                 BarChartRodData(
                   toY: stats[m]!.spent.toDouble(),
                   width: 10,
-                  color: Palette.violet,
+                  color: Palette.brand,
                   borderRadius: const BorderRadius.vertical(top: Radius.circular(4)),
                 ),
                 BarChartRodData(
                   toY: stats[m]!.income.toDouble(),
                   width: 10,
-                  color: Palette.mint,
+                  color: Palette.green,
                   borderRadius: const BorderRadius.vertical(top: Radius.circular(4)),
                 ),
               ],

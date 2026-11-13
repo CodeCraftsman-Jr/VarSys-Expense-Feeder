@@ -242,10 +242,10 @@ class _ConnectSmsCard extends ConsumerWidget {
         Container(
           padding: const EdgeInsets.all(10),
           decoration: BoxDecoration(
-            color: Palette.mint.withValues(alpha: 0.15),
+            color: Palette.brand.withValues(alpha: 0.15),
             borderRadius: BorderRadius.circular(14),
           ),
-          child: const Icon(PhosphorIconsFill.chatText, color: Palette.mint),
+          child: const Icon(PhosphorIconsFill.chatText, color: Palette.brand),
         ),
         const SizedBox(width: 14),
         Expanded(
