@@ -1,3 +1,5 @@
+<p align="center"><img src="assets/branding/source/moneytrail-logo-horizontal.png" width="480" alt="VarSys MoneyTrail"></p>
+
 # VarSys MoneyTrail
 
 VarSys MoneyTrail reads the bank, card and UPI alerts on a member's phone and, from phase 2 of

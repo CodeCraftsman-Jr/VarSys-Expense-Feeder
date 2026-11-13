@@ -140,6 +140,57 @@ class IngestionService {
     return n;
   }
 
+  /// Re-checks SMS that already became transactions and drops the ones the
+  /// current parser ignores, e.g. lender "we received your EMI" receipts that
+  /// used to be stored as income next to the bank debit for the same payment.
+  /// Only the raw messages that now parse as [Ignored] are unlinked; a
+  /// transaction is deleted only when none of its messages still back it, so
+  /// edits to transactions that stay are kept. Returns the deleted count.
+  Future<int> dropNowIgnored() async {
+    final rows = await (db.select(
+      db.rawMessages,
+    )..where((m) => m.source.equalsValue(SourceKind.sms) & m.transactionId.isNotNull())).get();
+    final ignored = <RawMessage, String>{};
+    final stillBacked = <int>{};
+    for (final m in rows) {
+      final input = RawInput(
+        source: m.source,
+        externalId: m.externalId,
+        sender: m.sender,
+        body: m.body,
+        receivedAt: m.receivedAt,
+      );
+      if (_parserFor(m.source).parse(input) case Ignored(:final reason)) {
+        ignored[m] = reason;
+      } else {
+        stillBacked.add(m.transactionId!);
+      }
+    }
+    // Manual entries and email receipts also back a transaction.
+    final txnIds = {for (final m in ignored.keys) m.transactionId!};
+    if (txnIds.isEmpty) return 0;
+    final others = await (db.select(
+      db.rawMessages,
+    )..where((m) => m.transactionId.isIn(txnIds) & m.source.equalsValue(SourceKind.sms).not())).get();
+    stillBacked.addAll(others.map((m) => m.transactionId!));
+
+    final drop = txnIds.difference(stillBacked);
+    await db.transaction(() async {
+      for (final e in ignored.entries) {
+        await (db.update(db.rawMessages)..where((m) => m.id.equals(e.key.id))).write(
+          RawMessagesCompanion(
+            transactionId: const Value(null),
+            parseStatus: const Value(ParseStatus.ignored),
+            ignoreReason: Value(e.value),
+            mergeScore: const Value(null),
+          ),
+        );
+      }
+      await (db.delete(db.transactions)..where((t) => t.id.isIn(drop))).go();
+    });
+    return drop.length;
+  }
+
   /// Applies a transaction extracted out-of-band (e.g. by the LLM fallback)
   /// to a raw message that is already stored. Runs the same dedup →
   /// categorise → store path as [ingest], but updates the existing raw row

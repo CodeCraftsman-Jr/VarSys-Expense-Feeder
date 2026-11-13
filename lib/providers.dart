@@ -63,6 +63,7 @@ abstract final class PrefKeys {
   /// Set once the messages v1.0's parser skipped (foreign amounts, mostly)
   /// have been re-read with the current rules.
   static const skippedReparsed = 'sms.skippedReparsed';
+  static const repaymentReceiptsDropped = 'sms.repaymentReceiptsDropped';
 }
 
 /// The home currency: totals, budgets and the assistant use it, and amounts
@@ -203,6 +204,13 @@ class SmsSyncController extends Notifier<SmsSyncState> {
       if (!(_prefs.getBool(PrefKeys.skippedReparsed) ?? false)) {
         await ref.read(ingestionProvider).reparseSkipped();
         await _prefs.setBool(PrefKeys.skippedReparsed, true);
+      }
+      // Lender repayment receipts were stored as income before parser rule
+      // "Loan repayment receipt"; drop them once without a full re-parse,
+      // which would lose the user's edits.
+      if (!(_prefs.getBool(PrefKeys.repaymentReceiptsDropped) ?? false)) {
+        await ref.read(ingestionProvider).dropNowIgnored();
+        await _prefs.setBool(PrefKeys.repaymentReceiptsDropped, true);
       }
       final last = _prefs.getInt(PrefKeys.smsLastSync);
       final importFrom = _prefs.getInt(PrefKeys.smsImportFrom) ?? 0;

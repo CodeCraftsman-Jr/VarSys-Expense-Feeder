@@ -214,4 +214,70 @@ void main() {
       );
     });
   });
+
+  group('loan app messages are never income', () {
+    ParseResult p(String sender, String body) => const SmsParser().parse(
+      RawInput(source: SourceKind.sms, externalId: '1', sender: sender, body: body, receivedAt: DateTime(2026, 11, 3)),
+    );
+    for (final (sender, body, reason) in [
+      (
+        'AX-KRETBE-S',
+        'We have successfully received payment of Rs. 5275 towards loan availed on KreditBee. Please wait upto 24 hours for amount to reflect in loan.',
+        'Loan repayment receipt',
+      ),
+      (
+        'VM-DMISMS-S',
+        'Dear Customer, we have received Rs.2729.00 for your DMI Finance loan ID ending in 6863 . The amount will reflect in your loan account on the upcoming EMI due date.',
+        null,
+      ),
+      (
+        'CP-TRCRED-S',
+        "Dear Customer, We have received your loan application for Rs.10000 via True Balance App If you didn't apply, please contact us immediately.",
+        'Loan offer / application',
+      ),
+      (
+        'CP-TRCRED-S',
+        'Dear Customer, As per your request your loan with application no TBLV15-50511-5325246 is approved for Rs.1747. Take Disbursement now.',
+        'Loan offer / application',
+      ),
+      (
+        'JDRFcrpP',
+        'Dear 94424XX, Rs.50,000* loan is ready to be credited to your Bank A/c on 24.04.2026. Check your eligibility now http://hu2.in/x - Ramfincorp',
+        null,
+      ),
+      (
+        'VM-LXFAST',
+        'Dear User, Good News! Your Wallet A/c is credited successfully with Rs. 15,000 on 16-10-2024 Check now http://Kx7.in/LXFAST/x',
+        'Promotional',
+      ),
+      (
+        'AX-FTLOXN',
+        'Attention! Rs.15,000 has been credited to your wallet on 31-10-2024. Please log in to verify - http://Kx17.in/FTLOXN/x FT Loan',
+        'Promotional',
+      ),
+    ]) {
+      test(body.substring(0, 40), () {
+        final r = p(sender, body);
+        expect(r, isA<Ignored>(), reason: '$r');
+        if (reason != null) expect((r as Ignored).reason, reason);
+      });
+    }
+
+    test('the bank debit for the same repayment is still an expense', () {
+      final t = ok(
+        'JD-HDFCBK-S',
+        'Sent Rs.5275.00 From HDFC Bank A/C *1285 To KRAZYBEE SERVICES LIMITED On 03/11/26 Ref 006556452019 Not You? Call 18002586161/SMS BLOCK UPI to 73080808',
+      );
+      expect(t.direction, TxnDirection.debit);
+      expect(t.amountMinor, 527500);
+    });
+
+    test('a small finance bank credit is still income', () {
+      final t = ok(
+        'JK-SLCBNK-T',
+        'Rs. 1,400 received in A/c xx1718 on 13-Jul-26 from NORTH EAST SMALL FINANCE BANK via IMPS (Ref ID: 619494385227). Avl. Bal. Rs. 1,450.00',
+      );
+      expect(t.direction, TxnDirection.credit);
+    });
+  });
 }

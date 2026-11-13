@@ -53,6 +53,33 @@ class SmsParser implements MessageParser {
     r'e-?mandate (has been )?registered|si (has been )?registered)',
   );
 
+  /// A lender confirming it got your loan / EMI / pay-later repayment
+  /// ("We have successfully received payment of Rs. 5275 towards loan availed
+  /// on KreditBee", "we have received Rs.2729.00 for your DMI Finance loan").
+  /// The money left through a bank or UPI alert that is recorded on its own,
+  /// so this is a receipt, not a second spend, and never income.
+  static final _repaymentReceipt = RegExp(
+    r'\b(?:we have|have|successfully)\s+received\s+(?:your\s+)?(?:payment|repayment|emi|rs|inr|₹)'
+    r'.{0,60}?\b(?:towards|for)\s+(?:your\s+|the\s+)?(?:[a-z]+\s+){0,3}(?:loan|emi|paylater|pay later)\b',
+  );
+
+  /// Loan apps talking about money that has not moved: an application they
+  /// received, an approval waiting for you to take the disbursement, or an
+  /// offer ("Rs.50,000* loan is ready to be credited to your Bank A/c").
+  static final _loanPitch = RegExp(
+    r'\b(?:loan application|application (?:no|number|id)\b|take disbursement|'
+    r'(?:is )?ready (?:to|for) (?:be )?credited|can be credited|will be credited to your bank|'
+    r'loan (?:is|has been) approved|approved for (?:rs|inr|₹)|get (?:rs|inr|₹)\.?\s*[\d,]+(?:\.\d+)?\*? credited|'
+    r'complete the application)',
+  );
+
+  /// Bait dressed as a credit ("Your Wallet A/c is credited successfully with
+  /// Rs. 15,000 ... Check now http://..."). Banks never ask you to claim or
+  /// check a credit through a link.
+  static final _creditBait = RegExp(
+    r'\b(?:claim now|check now|click to check|log ?in to verify|tap to claim|claim your)\b',
+  );
+
   // ---- extraction -------------------------------------------------------
 
   /// Group 1 is the currency marker, group 2 the amount.
@@ -139,6 +166,9 @@ class SmsParser implements MessageParser {
     if (_future.hasMatch(lower)) return const Ignored('Reminder / scheduled');
     if (_request.hasMatch(lower)) return const Ignored('Payment request');
     if (_mandateSetup.hasMatch(lower)) return const Ignored('Mandate setup');
+    if (_repaymentReceipt.hasMatch(lower)) return const Ignored('Loan repayment receipt');
+    if (_loanPitch.hasMatch(lower)) return const Ignored('Loan offer / application');
+    if (_creditBait.hasMatch(lower)) return const Ignored('Promotional');
     if (_statement.hasMatch(lower) && !_strongVerb(lower)) return const Ignored('Statement / bill');
     if (sender.isPromotional) return const Ignored('Promotional');
     if (_promo.hasMatch(lower) && !_strongVerb(lower)) return const Ignored('Promotional');

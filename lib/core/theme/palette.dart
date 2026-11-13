@@ -10,7 +10,7 @@ abstract final class Palette {
   // either surface; the theme picks [brandLight] / [brandDark] for filled
   // controls so their labels keep enough contrast.
   static const brand = Color(0xFF3B82F6); // blue-500
-  static const brandLight = Color(0xFF2563EB); // blue-600, white text
+  static const brandLight = Color(0xFF1154EA); // logo blue, white text
   static const brandDark = Color(0xFF60A5FA); // blue-400, dark text
   static const brandDeep = Color(0xFF1E3A8A); // blue-900, summary cards with white text
   static const brandNavy = Color(0xFF0B1220); // VarSys mark backdrop

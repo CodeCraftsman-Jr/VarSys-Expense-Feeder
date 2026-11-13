@@ -4,6 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:moneytrail/data/db/database.dart';
 import 'package:moneytrail/ingestion/ingestion_service.dart';
 import 'package:moneytrail/ingestion/parser/parsed_txn.dart';
+import 'package:moneytrail/ingestion/parser/sms_parser.dart';
 
 void main() {
   late AppDatabase db;
@@ -133,4 +134,59 @@ void main() {
     expect(view.category?.name, 'Food & Dining');
     expect(view.account?.name, 'ICICI Bank');
   });
+
+  test('three SBI UPI payments of the same amount minutes apart stay three spends', () async {
+    String sbi(String ref) =>
+        'Dear UPI user A/C X5910 debited by 60.00 on date 13Nov26 trf to Mr K Harikrishna Refno $ref If not u? call-1800111109 for other services-18001234-SBI';
+    await svc.ingest([
+      msg('JD-SBIUPI-S', sbi('668397152447'), t0),
+      msg('JD-SBIUPI-S', sbi('668397152448'), t0.add(const Duration(minutes: 2))),
+      msg('JD-SBIUPI-S', sbi('668397152449'), t0.add(const Duration(minutes: 4))),
+    ]);
+    final txns = await db.select(db.transactions).get();
+    expect(txns, hasLength(3));
+    expect(txns.every((t) => t.direction == TxnDirection.debit && t.amountMinor == 6000), isTrue);
+  });
+
+  test('dropNowIgnored removes lender receipts an older parser stored as income', () async {
+    const receipt =
+        'We have successfully received payment of Rs. 5275 towards loan availed on KreditBee. Please wait upto 24 hours for amount to reflect in loan.';
+    // Older parser: read the lender receipt as a credit.
+    final old = IngestionService(db, parsers: {SourceKind.sms: _OldReceiptParser()});
+    await old.ingest([
+      msg(
+        'JD-HDFCBK-S',
+        'Sent Rs.5275.00 From HDFC Bank A/C *1285 To KRAZYBEE SERVICES LIMITED On 03/11/26 Ref 006556452019',
+        t0,
+      ),
+      msg('AX-KRETBE-S', receipt, t0.add(const Duration(minutes: 1))),
+    ]);
+    expect(await db.select(db.transactions).get(), hasLength(2));
+
+    expect(await svc.dropNowIgnored(), 1);
+    final txns = await db.select(db.transactions).get();
+    expect(txns, hasLength(1));
+    expect(txns.single.direction, TxnDirection.debit);
+    final raw = await (db.select(db.rawMessages)..where((m) => m.sender.equals('AX-KRETBE-S'))).getSingle();
+    expect(raw.parseStatus, ParseStatus.ignored);
+    expect(raw.ignoreReason, 'Loan repayment receipt');
+    expect(raw.transactionId, isNull);
+  });
+}
+
+/// Mimics the parser before the "Loan repayment receipt" rule.
+class _OldReceiptParser implements MessageParser {
+  @override
+  ParseResult parse(RawInput input) {
+    if (!input.body.contains('towards loan availed')) return const SmsParser().parse(input);
+    return Parsed(
+      ParsedTxn(
+        amountMinor: 527500,
+        direction: TxnDirection.credit,
+        occurredAt: input.receivedAt,
+        mode: PaymentMode.values.first,
+        confidence: 0.3,
+      ),
+    );
+  }
 }

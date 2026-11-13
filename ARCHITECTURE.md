@@ -225,13 +225,13 @@ so export it first).
 
 ### Icon and splash
 
-The mark, the VarSys "V" with a light notch on the VarSys navy tile (same shape as
-`VarSys-Landing/public/favicon.svg`), is
-defined once in `tool/gen_brand_assets.js` (`node tool/gen_brand_assets.js`, no npm packages), which
-writes the SVG sources in `assets/branding/`, the Android adaptive icon (vector foreground, flat navy
-background, `<monochrome>` layer for Android 13+ themed icons), the notification small icon
-`@drawable/ic_stat_varsys` (white on transparent, kept through resource shrinking by
-`res/raw/keep.xml`), legacy PNGs, the splash images, the iOS AppIcon (default, dark and tinted iOS 18
+The logo sources are `assets/branding/source/moneytrail-app-icon.png` (white "M" mark on
+MoneyTrail blue) and `moneytrail-logo-horizontal.png` (mark plus the VarSys MoneyTrail wordmark).
+`python tool/gen_brand_assets.py` (needs Pillow) lifts the white mark out as an alpha mask and
+writes the Android adaptive icon (PNG foreground, flat blue background, `<monochrome>` layer for
+Android 13+ themed icons), the notification small icon `@drawable/ic_stat_varsys` (white on
+transparent, kept through resource shrinking by `res/raw/keep.xml`), legacy PNGs, the splash images,
+`assets/branding/app_icon.png` (drawn in-app by `BrandMark`), the iOS AppIcon (default, dark and tinted iOS 18
 appearances) and previews on light and dark home screens in `assets/branding/previews/`. The splash is
 the icon disc on paper in light mode and on ink in dark mode (Android 12+ system splash and the older
 launch window; iOS uses the `LaunchBackground` named colour).
