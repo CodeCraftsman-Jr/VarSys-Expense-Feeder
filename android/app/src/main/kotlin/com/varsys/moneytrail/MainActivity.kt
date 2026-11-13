@@ -36,6 +36,18 @@ class MainActivity : FlutterFragmentActivity() {
         // (legacy store: FlutterSharedPreferences, keys prefixed "flutter.").
         val prefs = getSharedPreferences("FlutterSharedPreferences", MODE_PRIVATE)
         setSecure(prefs.getBoolean("flutter.$HIDE_IN_RECENTS_PREF", false))
+        // Imports SMS and sends them to Joint Journey while the app is closed.
+        SyncWorker.schedulePeriodic(this)
+    }
+
+    override fun onResume() {
+        super.onResume()
+        visible = true
+    }
+
+    override fun onPause() {
+        visible = false
+        super.onPause()
     }
 
     private fun setSecure(secure: Boolean) {
@@ -224,32 +236,8 @@ class MainActivity : FlutterFragmentActivity() {
     }
 
     /** Inbox messages newer than [since], oldest first. */
-    private fun readInbox(since: Long, limit: Int): List<Map<String, Any?>> {
-        val out = ArrayList<Map<String, Any?>>()
-        contentResolver.query(
-            Telephony.Sms.Inbox.CONTENT_URI,
-            arrayOf(Telephony.Sms._ID, Telephony.Sms.ADDRESS, Telephony.Sms.BODY, Telephony.Sms.DATE),
-            "${Telephony.Sms.DATE} > ?",
-            arrayOf(since.toString()),
-            "${Telephony.Sms.DATE} ASC",
-        )?.use { c ->
-            val id = c.getColumnIndexOrThrow(Telephony.Sms._ID)
-            val addr = c.getColumnIndexOrThrow(Telephony.Sms.ADDRESS)
-            val body = c.getColumnIndexOrThrow(Telephony.Sms.BODY)
-            val date = c.getColumnIndexOrThrow(Telephony.Sms.DATE)
-            while (c.moveToNext() && out.size < limit) {
-                out.add(
-                    mapOf(
-                        "id" to c.getLong(id).toString(),
-                        "address" to (c.getString(addr) ?: ""),
-                        "body" to (c.getString(body) ?: ""),
-                        "date" to c.getLong(date),
-                    )
-                )
-            }
-        }
-        return out
-    }
+    private fun readInbox(since: Long, limit: Int): List<Map<String, Any?>> =
+        BackgroundChannels.readInbox(this, since, limit)
 
     override fun onDestroy() {
         io.shutdown()
@@ -257,6 +245,9 @@ class MainActivity : FlutterFragmentActivity() {
     }
 
     companion object {
+        /** True while MoneyTrail is on screen; the background sync then stands aside. */
+        @Volatile
+        var visible = false
         private const val SMS_REQUEST = 4201
         private const val NOTIFY_REQUEST = 4202
         const val EXTRA_FROM_ALERT = "com.varsys.moneytrail.FROM_ALERT"

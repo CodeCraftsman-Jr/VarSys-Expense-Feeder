@@ -9,6 +9,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'app.dart';
+import 'background/background_sync.dart';
 import 'ingestion/share/share_intake.dart';
 import 'llm/on_device/on_device_client.dart';
 import 'providers.dart';
@@ -40,3 +41,8 @@ Future<void> _initOnDeviceAi() async {
     debugPrint('On-device AI unavailable: $e');
   }
 }
+
+/// Entry point for SyncWorker.kt (Android): imports new SMS and syncs Joint
+/// Journey while the app is closed. Looked up by name in this library.
+@pragma('vm:entry-point')
+Future<void> backgroundSync() => runBackgroundSync();

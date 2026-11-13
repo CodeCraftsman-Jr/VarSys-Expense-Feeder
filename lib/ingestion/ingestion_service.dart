@@ -38,6 +38,9 @@ class IngestionService {
 
   MessageParser _parserFor(SourceKind s) => parsers[s] ?? parsers[SourceKind.sms]!;
 
+  /// The parser used for messages from [s].
+  MessageParser parserFor(SourceKind s) => _parserFor(s);
+
   Future<IngestReport> ingest(List<RawInput> inputs) async {
     final report = IngestReport();
     if (inputs.isEmpty) return report;

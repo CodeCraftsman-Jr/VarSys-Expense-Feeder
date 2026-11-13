@@ -1,8 +1,10 @@
 # Transaction feed for Joint Journey: architecture plan
 
-Status: revision 4. Review 1 (29 findings) and review 2 (17 partial plus 23 new findings)
+Status: revision 5. Review 1 (29 findings) and review 2 (17 partial plus 23 new findings)
 are both applied; section 18 maps every finding. No further review rounds. Revision 4 removes the
-configurable funding rules (section 19). Date: 2026-11-12.
+configurable funding rules (section 19). Revision 5 fixes the source to bank SMS only, ships
+write-through without a review step for plain spends, and adds phone corrections (section 20).
+Date: 2026-11-13.
 App name: VarSys MoneyTrail (decided 2026-11-12). Short label on the phone: MoneyTrail.
 Android application id: `com.varsys.moneytrail` (VarSys convention, as `com.varsys.jointjourney`).
 
@@ -235,8 +237,9 @@ until `transfer_kind` is extracted; `raw_text`, `private` and the team view arri
 raw-text and privacy slice. The phone keeps no separate outbox queue: the outbox is every SMS or
 email transaction without an upload record for the team (`lib/feed/feed_outbox.dart`).
 
-Mutable columns, and only these: `status`, `event_id`, `private` (through an annotation),
-`raw_text` (purge only). Everything else is fixed after insert.
+Mutable columns, and only these: `status` (including `withdrawn`, section 20), `transfer_kind`
+(filled once by the owner's phone when it was missing), `event_id`, `private` (through an
+annotation), `raw_text` (purge only). Everything else is fixed after insert.
 
 ### 4.3 `feed_annotations`
 
@@ -645,7 +648,9 @@ which is why lots are keyed by event and funder.
 ## 11. API contracts (zod schemas live with the routes)
 
 - `POST /api/feed/rows`: `{ rows: FeedRowInput[] }` (max 100) -> `{ results: { client_message_id,
-  id?, status, reason? }[] }`.
+  id?, status, reason? }[] }`. A row may carry `transfer_kind` (`none`, `self`, `card_bill`, `p2p`).
+- `POST /api/feed/rows/withdraw`: `{ client_message_ids: string[] }` (max 100), with `X-Device-Id`
+  -> `{ results: { client_message_id, status: withdrawn | not_found, removed_expense_id? }[] }`.
 - `POST /api/feed/rows/{client_message_id}/annotations`: `{ client_seq, kind, value }` -> 201, or 200
   when that `(device_id, client_seq)` exists.
 - `DELETE /api/feed/rows/raw-text`: `{ ids?: number[] }` (all own rows when omitted) -> 204.
@@ -789,3 +794,31 @@ link, so the team rules screen added nothing a reviewer does not already do.
 | `feed_team_rules`, `/api/feed/rules` | `feed_team_settings`, `/api/feed/settings` (enable, backfill date, minimum parser version, raw-text retention) |
 
 Unchanged: the replay, lots, pairs, pins, the no-lot auto-write and every review-2 fix in section 18.
+
+## 20. Revision 5: bank SMS only, write-through now (2026-11-13)
+
+Decisions (user, 2026-11-13):
+- The source is bank SMS. Payments that send no SMS (UPI Lite, some app payments) are left for the
+  member to enter. Payment-app notifications are out: Google Pay posts none for payments the member
+  makes. Statement exports (Google Pay, PhonePe, Paytm) are parked until SMS works end to end.
+- SMS transactions go into Joint Journey without anyone approving them, as the plan already allowed
+  for spends with no open lot (5.8). The system applies its own corrections without asking.
+
+What shipped before this revision (phase 2, partial): device registration, `feed_rows` upload,
+and matching uploaded rows to expenses and income a member already entered (`feed_matches`,
+`match_method = amount_time`, alpha or beta runs it after each upload; unlinking is remembered in
+`feed_match_unlinks`). Events, lots, pairs and the review queue are not built.
+
+Changes in this revision (migration `2026-11-13-feed-write-through.sql`):
+
+| Item | Change |
+|---|---|
+| Transfer kind (2.2) | The phone sends `transfer_kind` per row: `self` and `card_bill` from its transfer detection, `p2p` when the parser saw a payment to a person, else `none`. The phone does not store the person-to-person flag, so it re-reads the stored message at upload. Rows uploaded before this get it on a one-time re-send; the server fills a missing kind on `already_received`. |
+| Write-through (5.8) | After linking, every unlinked row that is a debit, `transfer_kind = none`, not `needs_review`, not ATM, not unlinked by a person, and older than the 30-minute settle window (5.7) becomes an expense: spender (`member_user_id`) = phone owner, amount in INR, mode mapped to the expense modes (card left empty), category from the phone's hint by name, notes = merchant, `statement_text` = the SMS line. The link is a `feed_matches` row with `match_method = auto_write`. One payment seen by two phones (same reference and amount) is written once. At most 200 per run; the next upload continues. Credits are linked to income, never written. `p2p` and transfer rows stay unwritten until phase 3 pairs them. |
+| Actor (4.12 deferred) | The feed-matcher service user does not exist yet. Write-through runs as the alpha or beta member whose upload or match call triggered it (`expenses.user_id`), inside their RLS context; uploads from gamma phones are written on the next alpha or beta run. The service user and the nightly job (5.10) remain to build. |
+| Notifications | `statement_text` set means the activity trigger and push skip these rows, so a backfill does not notify the team once per SMS. |
+| Corrections (4.3, partly) | When the phone no longer produces a row it sent (the parser now ignores the message, the member deleted the transaction, merging changed it), it calls `POST /api/feed/rows/withdraw`. The row becomes `withdrawn` and is never matched or written; its link is removed (alpha or beta) and an `auto_write` expense is deleted (alpha). A withdrawn row the phone sends again comes back as `new`. The phone refuses to withdraw more than a quarter of what it sent (over 20 rows) in one run. Category and note annotations stay as planned. |
+| Background sync (2.2) | The phone syncs without being opened: on SMS arrival and on a periodic job (phase 2 item, now in progress). |
+
+Rollback: `2026-11-13-feed-write-through-rollback.sql` deletes every `auto_write` expense and its
+links, then restores the earlier constraints.

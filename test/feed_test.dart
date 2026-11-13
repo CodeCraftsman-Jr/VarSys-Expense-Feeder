@@ -15,6 +15,7 @@ import 'package:moneytrail/feed/feed_outbox.dart';
 import 'package:moneytrail/feed/feed_sync.dart';
 import 'package:moneytrail/ingestion/ingestion_service.dart';
 import 'package:moneytrail/ingestion/parser/parsed_txn.dart';
+import 'package:moneytrail/ingestion/parser/sms_parser.dart';
 import 'package:moneytrail/providers.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -117,6 +118,67 @@ void main() {
       expect((await box.pending(teamId: 't1')).pending, 0);
       expect((await outboxFor(db, app: '1.0.2+4').pending(teamId: 't1')).rows.single.clientMessageId, p.rows[1].clientMessageId);
       expect((await box.pending(teamId: 'another-team')).pending, 2, reason: 'uploads are per team');
+    });
+
+    test('transfer_kind: merchant spend none, payment to a person p2p', () async {
+      await IngestionService(db).ingest([
+        RawInput(
+          source: SourceKind.sms,
+          externalId: '201',
+          sender: 'JD-SBIUPI-S',
+          body: 'Dear UPI user A/C X5910 debited by 60.00 on date 05Nov26 trf to Mr K Harikrishna Refno 668397152447 If not u? call-1800111109 for other services-18001234-SBI',
+          receivedAt: t0.add(const Duration(hours: 3)),
+        ),
+      ]);
+      final box = FeedOutbox(
+        db,
+        installId: 'install-A',
+        appVersion: '1',
+        parserVersions: const {SourceKind.sms: 4},
+        parserFor: (_) => const SmsParser(),
+      );
+      final rows = (await box.pending(teamId: 't1')).rows;
+      expect(rows.firstWhere((r) => r.json['amount_minor'] == 25000).json['transfer_kind'], 'none');
+      expect(rows.firstWhere((r) => r.json['amount_minor'] == 6000).json['transfer_kind'], 'p2p');
+      expect(
+        (await outboxFor(db).pending(teamId: 't1')).rows.every((r) => r.json['transfer_kind'] == 'none'),
+        isTrue,
+        reason: 'without a parser only self or none',
+      );
+    });
+
+    test('a sent transaction that is deleted becomes withdrawable', () async {
+      final box = outboxFor(db);
+      final p = await box.pending(teamId: 't1');
+      await box.record('t1', {for (final r in p.rows) r.clientMessageId: r.transactionId}, [
+        for (final r in p.rows) FeedRowResult(clientMessageId: r.clientMessageId, status: 'accepted', id: 1),
+      ]);
+      expect((await box.withdrawable('t1')).ids, isEmpty);
+
+      final swiggy = p.rows.firstWhere((r) => r.json['amount_minor'] == 25000);
+      await db.deleteTxn(swiggy.transactionId);
+      final w = await box.withdrawable('t1');
+      expect(w.ids, [swiggy.clientMessageId]);
+      expect(w.delivered, 2);
+      await box.recordWithdrawn('t1', w.ids);
+      expect((await box.withdrawable('t1')).ids, isEmpty);
+      expect((await box.pending(teamId: 't1')).pending, 0);
+    });
+
+    test('resendDeliveredBefore sends rows the server has once more, then moves on', () async {
+      final box = outboxFor(db);
+      final p = await box.pending(teamId: 't1');
+      await box.record('t1', {for (final r in p.rows) r.clientMessageId: r.transactionId}, [
+        for (final r in p.rows) FeedRowResult(clientMessageId: r.clientMessageId, status: 'accepted', id: 1),
+      ]);
+      final cut = DateTime.now().add(const Duration(seconds: 1));
+      final again = await box.pending(teamId: 't1', resendDeliveredBefore: cut);
+      expect(again.pending, 2);
+      await Future<void>.delayed(const Duration(milliseconds: 1100));
+      await box.record('t1', {for (final r in again.rows) r.clientMessageId: r.transactionId}, [
+        for (final r in again.rows) FeedRowResult(clientMessageId: r.clientMessageId, status: 'already_received', id: 1),
+      ]);
+      expect((await box.pending(teamId: 't1', resendDeliveredBefore: cut)).pending, 0);
     });
 
     test('limit 0 counts without building rows', () async {
@@ -262,6 +324,111 @@ void main() {
       down = false;
       await c.read(feedSyncProvider.notifier).run();
       expect(c.read(feedSyncProvider).pending, 0, reason: 'sent once back online');
+    });
+  });
+
+  group('FeedSyncController corrections', () {
+    late AppDatabase db;
+    late SharedPreferences prefs;
+    late MemorySecrets secrets;
+    late List<http.Request> requests;
+
+    http.Client server() => MockClient((req) async {
+      requests.add(req);
+      switch (req.url.path) {
+        case '/api/auth/sign-in/email':
+          return http.Response('{"token":"raw"}', 200, headers: {'set-auth-token': 'tok.sig'});
+        case '/api/auth/tenant-context':
+          return http.Response(jsonEncode({'userId': 'u1', 'teamId': 't1', 'role': 'alpha', 'name': 'P'}), 200);
+        case '/api/feed/devices':
+          return http.Response('{"id":1}', 201);
+        case '/api/feed/settings':
+          return http.Response(
+            jsonEncode({'enabled': true, 'backfillFrom': null, 'minParserVersion': 0, 'rawTextRetentionDays': 90}),
+            200,
+          );
+        case '/api/feed/rows':
+          final rows = (jsonDecode(req.body) as Map)['rows'] as List;
+          return http.Response(
+            jsonEncode({
+              'results': [
+                for (final r in rows) {'client_message_id': (r as Map)['client_message_id'], 'id': 1, 'status': 'accepted'},
+              ],
+            }),
+            200,
+          );
+        case '/api/feed/rows/withdraw':
+          final ids = (jsonDecode(req.body) as Map)['client_message_ids'] as List;
+          return http.Response(
+            jsonEncode({
+              'results': [for (final id in ids) {'client_message_id': id, 'status': 'withdrawn'}],
+            }),
+            200,
+          );
+      }
+      return http.Response('', 404);
+    });
+
+    Future<ProviderContainer> signedIn() async {
+      final client = server();
+      final c = ProviderContainer(
+        overrides: [
+          prefsProvider.overrideWithValue(prefs),
+          secretStoreProvider.overrideWithValue(secrets),
+          databaseProvider.overrideWithValue(db),
+          varsysAuthClientProvider.overrideWithValue(VarSysAuthClient(client)),
+          jjFeedClientProvider.overrideWithValue(JjFeedClient(client)),
+          appInfoProvider.overrideWithValue(() async => const AppInfo(label: 'Phone', version: '1.0.1+3')),
+          unauthorizedRetryDelayProvider.overrideWithValue(Duration.zero),
+        ],
+      );
+      addTearDown(c.dispose);
+      await c.read(accountProvider.notifier).signIn(email: 'p@example.com', password: 'x');
+      await c.read(feedSyncProvider.notifier).run();
+      return c;
+    }
+
+    setUp(() async {
+      db = memoryDb();
+      await seed(db);
+      SharedPreferences.setMockInitialValues({});
+      prefs = await SharedPreferences.getInstance();
+      secrets = MemorySecrets();
+      requests = [];
+    });
+    tearDown(() => db.close());
+
+    test('a deleted transaction is taken back from Joint Journey once', () async {
+      final c = await signedIn();
+      expect(requests.where((r) => r.url.path == '/api/feed/rows/withdraw'), isEmpty);
+      expect(await db.select(db.feedUploads).get(), hasLength(2));
+      final txns = await db.select(db.transactions).get();
+      await db.deleteTxn(txns.firstWhere((t) => t.amountMinor == 25000).id);
+
+      await c.read(feedSyncProvider.notifier).run();
+      final w = requests.where((r) => r.url.path == '/api/feed/rows/withdraw').toList();
+      expect(w, hasLength(1));
+      expect((jsonDecode(w.single.body) as Map)['client_message_ids'] as List, hasLength(1));
+      final statuses = {for (final u in await db.select(db.feedUploads).get()) u.status};
+      expect(statuses, containsAll(['accepted', 'withdrawn']));
+
+      await c.read(feedSyncProvider.notifier).run();
+      expect(requests.where((r) => r.url.path == '/api/feed/rows/withdraw'), hasLength(1), reason: 'not sent twice');
+    });
+
+    test('rows sent before transfer_kind existed are sent again once', () async {
+      final c = await signedIn();
+      final firstUploads = requests.where((r) => r.url.path == '/api/feed/rows').length;
+      // An install that synced before this version.
+      await prefs.remove(FeedPrefKeys.transferKindSent);
+      await Future<void>.delayed(const Duration(milliseconds: 1100));
+      await c.read(feedSyncProvider.notifier).run();
+      final resent = requests.where((r) => r.url.path == '/api/feed/rows').skip(firstUploads).toList();
+      expect(resent, hasLength(1));
+      expect((jsonDecode(resent.single.body) as Map)['rows'] as List, hasLength(2));
+      expect(prefs.getBool(FeedPrefKeys.transferKindSent), isTrue);
+      await c.read(feedSyncProvider.notifier).run();
+      expect(requests.where((r) => r.url.path == '/api/feed/rows'), hasLength(firstUploads + 1));
     });
   });
 }

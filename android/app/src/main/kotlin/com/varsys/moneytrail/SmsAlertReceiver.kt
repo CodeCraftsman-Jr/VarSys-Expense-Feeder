@@ -27,12 +27,16 @@ import java.util.Locale
 class SmsAlertReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
         if (intent.action != Telephony.Sms.Intents.SMS_RECEIVED_ACTION) return
-        if (!alertsEnabled(context)) return
         val parts = try {
             Telephony.Sms.Intents.getMessagesFromIntent(intent)
         } catch (e: Exception) {
             return
         } ?: return
+        // A bank-style sender: import and send to Joint Journey shortly, whether or not alerts are on.
+        if (parts.filterNotNull().any { dlt.matches((it.displayOriginatingAddress ?: it.originatingAddress ?: "").uppercase()) }) {
+            SyncWorker.runSoon(context)
+        }
+        if (!alertsEnabled(context)) return
         // Multipart messages arrive as several PDUs from one sender.
         parts.filterNotNull()
             .groupBy { it.displayOriginatingAddress ?: it.originatingAddress ?: "" }

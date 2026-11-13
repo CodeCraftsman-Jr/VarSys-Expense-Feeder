@@ -13,6 +13,10 @@ abstract final class FeedPrefKeys {
   /// Random per install, kept across sign-outs; hashed into every
   /// client_message_id so two phones of one member never collide.
   static const installId = 'feed.install_id';
+
+  /// Set once every row sent before `transfer_kind` existed was sent again
+  /// with it.
+  static const transferKindSent = 'feed.transfer_kind_sent';
 }
 
 class FeedSyncState {
@@ -86,10 +90,17 @@ class FeedSyncController extends Notifier<FeedSyncState> {
             message: 'Your team feed is off. An alpha can switch it on.');
         return;
       }
+      final prefs = ref.read(prefsProvider);
+      final runStart = DateTime.now();
+      final resendBefore = (prefs.getBool(FeedPrefKeys.transferKindSent) ?? false) ? null : runStart;
       // Each pass records every answer, so the next pass moves on; the cap
       // only guards against a server that never records anything.
       for (var pass = 0; pass < 200; pass++) {
-        final batch = await outbox.pending(teamId: profile.teamId, from: settings.backfillStart);
+        final batch = await outbox.pending(
+          teamId: profile.teamId,
+          from: settings.backfillStart,
+          resendDeliveredBefore: resendBefore,
+        );
         if (batch.rows.isEmpty) break;
         final answers = await client.uploadRows(
           token: token,
@@ -103,15 +114,55 @@ class FeedSyncController extends Notifier<FeedSyncState> {
         state = FeedSyncState(running: true, settings: settings, sent: sent, pending: batch.pending - batch.rows.length, lastRun: state.lastRun);
         if (batch.pending <= batch.rows.length) break;
       }
+      if (resendBefore != null) await prefs.setBool(FeedPrefKeys.transferKindSent, true);
+      final withdrawn = await _withdraw(outbox, profile.teamId, token, deviceId);
       final left = (await outbox.pending(teamId: profile.teamId, from: settings.backfillStart, limit: 0)).pending;
       if (!ref.mounted) return;
-      state = FeedSyncState(settings: settings, sent: sent, pending: left, lastRun: DateTime.now());
+      state = FeedSyncState(
+        settings: settings,
+        sent: sent,
+        pending: left,
+        lastRun: DateTime.now(),
+        message: withdrawn.skipped,
+      );
     } on FeedHttpException catch (e) {
       if (!ref.mounted) return;
       state = FeedSyncState(settings: settings, sent: sent, pending: state.pending, lastRun: DateTime.now(),
           message: e.message, offline: e.offline);
       if (e.code == 'DEVICE_REVOKED') unawaited(notifier.refresh());
     }
+  }
+
+  /// Takes back rows the server holds that this phone no longer produces (a
+  /// message the parser now ignores, a deleted transaction). Skipped while an
+  /// SMS import is rebuilding transactions, and refused when it would take
+  /// back more than a quarter of everything sent: that points at a local
+  /// problem, not at corrections.
+  Future<({int count, String? skipped})> _withdraw(
+    FeedOutbox outbox,
+    String teamId,
+    String token,
+    String deviceId,
+  ) async {
+    if (ref.read(smsSyncProvider).running) return (count: 0, skipped: null);
+    final (:ids, :delivered) = await outbox.withdrawable(teamId);
+    if (ids.isEmpty) return (count: 0, skipped: null);
+    if (ids.length > 20 && ids.length * 4 > delivered) {
+      return (count: 0, skipped: 'Not taking back ${ids.length} of $delivered sent transactions; that looks wrong.');
+    }
+    final client = ref.read(jjFeedClientProvider);
+    var count = 0;
+    for (var i = 0; i < ids.length; i += 100) {
+      final chunk = ids.sublist(i, i + 100 > ids.length ? ids.length : i + 100);
+      final answers = await client.withdrawRows(token: token, deviceId: deviceId, clientMessageIds: chunk);
+      final done = [
+        for (final a in answers)
+          if (a['status'] == 'withdrawn' || a['status'] == 'not_found') a['client_message_id'] as String,
+      ];
+      await outbox.recordWithdrawn(teamId, done);
+      count += done.length;
+    }
+    return (count: count, skipped: null);
   }
 
   /// Alpha switch for the team feed. The feed is on by default for every
@@ -145,6 +196,7 @@ class FeedSyncController extends Notifier<FeedSyncState> {
       installId: install,
       appVersion: app.version,
       parserVersions: {SourceKind.sms: smsParserVersion, SourceKind.email: emailParserVersion},
+      parserFor: ref.read(ingestionProvider).parserFor,
     );
   }
 }

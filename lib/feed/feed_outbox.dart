@@ -4,6 +4,7 @@ import 'package:crypto/crypto.dart';
 import 'package:drift/drift.dart';
 
 import '../data/db/database.dart';
+import '../ingestion/parser/parsed_txn.dart';
 
 /// One transaction ready to send (feed plan 3.3). [json] is the API body row.
 class FeedOutboxRow {
@@ -19,7 +20,13 @@ class FeedOutboxRow {
 /// backfill date, and has no upload record for the team (or only a rejected
 /// one from an older app version).
 class FeedOutbox {
-  FeedOutbox(this.db, {required this.installId, required this.appVersion, required this.parserVersions});
+  FeedOutbox(
+    this.db, {
+    required this.installId,
+    required this.appVersion,
+    required this.parserVersions,
+    this.parserFor,
+  });
 
   final AppDatabase db;
 
@@ -30,6 +37,14 @@ class FeedOutbox {
   /// Current parser version per source kind.
   final Map<SourceKind, int> parserVersions;
 
+  /// Re-reads a stored message to recover what the transaction row does not
+  /// keep (whether it was a payment to a person). Null: `transfer_kind` is
+  /// only `self` or `none`.
+  final MessageParser Function(SourceKind source)? parserFor;
+
+  /// Upload statuses that mean the server holds the row.
+  static const delivered = {'accepted', 'already_received'};
+
   /// sha256 of the install id and the sorted `source:externalId` list. Stable
   /// across re-parses (it names the messages, not the transaction row) and
   /// distinct between two phones of the same member.
@@ -38,10 +53,16 @@ class FeedOutbox {
     return sha256.convert(utf8.encode('$installId|${sorted.join(',')}')).toString();
   }
 
+  /// Rows still to send. With [resendDeliveredBefore], rows the server
+  /// already has, last sent before that time, are sent again too (once, so it
+  /// learns fields added later, such as `transfer_kind`); the server answers
+  /// `already_received` and fills them in. Recording the answer moves their
+  /// time past the cut-off, so a run always moves on.
   Future<({List<FeedOutboxRow> rows, int pending})> pending({
     required String teamId,
     DateTime? from,
     int limit = 100,
+    DateTime? resendDeliveredBefore,
   }) async {
     final uploads = {
       for (final u in await (db.select(db.feedUploads)..where((u) => u.teamId.equals(teamId))).get())
@@ -55,6 +76,12 @@ class FeedOutbox {
       byTxn.putIfAbsent(m.transactionId!, () => []).add(m);
     }
     if (byTxn.isEmpty) return (rows: const <FeedOutboxRow>[], pending: 0);
+    // Upload times are stored to the whole second: compare against the
+    // cut-off rounded down too, or a row recorded in the cut-off's own second
+    // would look older than it and be sent again on every pass.
+    final cut = resendDeliveredBefore == null
+        ? null
+        : DateTime.fromMillisecondsSinceEpoch(resendDeliveredBefore.millisecondsSinceEpoch ~/ 1000 * 1000);
 
     final query = db.select(db.transactions).join([
       leftOuterJoin(db.categories, db.categories.id.equalsExp(db.transactions.categoryId)),
@@ -75,7 +102,10 @@ class FeedOutbox {
       final retry = done != null &&
           (done.status == 'rejected' || done.status == 'client_outdated') &&
           done.appVersion != appVersion;
-      if (done != null && !retry) continue;
+      final resend = cut != null && done != null && delivered.contains(done.status) && done.uploadedAt.isBefore(cut);
+      // Withdrawn earlier but produced again (e.g. a parser change undone): send it back.
+      final back = done != null && done.status == 'withdrawn';
+      if (done != null && !retry && !resend && !back) continue;
       pending++;
       if (out.length >= limit) continue;
       out.add(FeedOutboxRow(
@@ -112,6 +142,7 @@ class FeedOutbox {
       'account_hint': _cap(t.accountHint ?? account?.last4, 20),
       'mode': t.mode.name,
       'transfer_hint': t.isTransfer,
+      'transfer_kind': _transferKind(t, msgs),
       'reference': _cap(t.reference, 64),
       'counterparty': _cap(t.counterparty, 200),
       'merchant': _cap(t.merchant, 200),
@@ -121,6 +152,74 @@ class FeedOutbox {
       'app_version': appVersion,
       'parser_version': [for (final k in kinds) parserVersions[k] ?? 0].reduce((a, b) => a > b ? a : b),
     };
+  }
+
+  /// `self` (own accounts), `card_bill`, `p2p` (a payment to or from a
+  /// person) or `none`. Joint Journey writes only `none` debits as expenses on
+  /// its own; the rest wait until transfers are classified (feed plan 5.8).
+  String _transferKind(Transaction t, List<RawMessage> msgs) {
+    final text = msgs.map((m) => m.body.toLowerCase()).join(' ');
+    if (t.isTransfer) {
+      return RegExp(r'credit ?card|card ?bill|\bcc bill|card (?:payment|dues)').hasMatch(text) ? 'card_bill' : 'self';
+    }
+    final parse = parserFor;
+    if (parse == null) return 'none';
+    for (final m in msgs) {
+      final r = parse(m.source).parse(
+        RawInput(source: m.source, externalId: m.externalId, sender: m.sender, body: m.body, receivedAt: m.receivedAt),
+      );
+      if (r is Parsed) {
+        if (r.txn.transferHint) return 'self';
+        return r.txn.isPersonToPerson ? 'p2p' : 'none';
+      }
+    }
+    return 'none';
+  }
+
+  /// Rows the server holds that no current transaction produces any more: the
+  /// parser now ignores their message (a loan offer read as income), the
+  /// transaction was deleted, or merging changed its message set. These are
+  /// taken back with `POST /api/feed/rows/withdraw`.
+  /// [delivered] is how many rows the server holds from this phone, so the
+  /// caller can refuse a suspiciously large withdrawal.
+  Future<({List<String> ids, int delivered})> withdrawable(String teamId) async {
+    final sent = await (db.select(db.feedUploads)
+          ..where((u) => u.teamId.equals(teamId) & u.status.isIn(FeedOutbox.delivered)))
+        .get();
+    if (sent.isEmpty) return (ids: const <String>[], delivered: 0);
+    final current = await currentMessageIds();
+    return (
+      ids: [for (final u in sent) if (!current.contains(u.clientMessageId)) u.clientMessageId],
+      delivered: sent.length,
+    );
+  }
+
+  /// The client message id of every transaction that would be uploaded now
+  /// (ignoring the backfill date).
+  Future<Set<String>> currentMessageIds() async {
+    final messages = await (db.select(db.rawMessages)
+          ..where((m) => m.transactionId.isNotNull() & m.source.isInValues([SourceKind.sms, SourceKind.email])))
+        .get();
+    final byTxn = <int, List<String>>{};
+    for (final m in messages) {
+      byTxn.putIfAbsent(m.transactionId!, () => []).add('${m.source.name}:${m.externalId}');
+    }
+    if (byTxn.isEmpty) return {};
+    final live = await (db.selectOnly(db.transactions)
+          ..addColumns([db.transactions.id])
+          ..where(db.transactions.id.isIn(byTxn.keys) & db.transactions.duplicateOfId.isNull()))
+        .map((r) => r.read(db.transactions.id)!)
+        .get();
+    return {for (final id in live) clientMessageIdFor(installId, byTxn[id]!)};
+  }
+
+  /// Marks rows the server confirmed as withdrawn, so they are not sent again.
+  Future<void> recordWithdrawn(String teamId, Iterable<String> clientMessageIds) async {
+    final ids = clientMessageIds.toList();
+    if (ids.isEmpty) return;
+    await (db.update(db.feedUploads)
+          ..where((u) => u.teamId.equals(teamId) & u.clientMessageId.isIn(ids)))
+        .write(FeedUploadsCompanion(status: const Value('withdrawn'), uploadedAt: Value(DateTime.now())));
   }
 
   /// Records the server's answer for each sent row.

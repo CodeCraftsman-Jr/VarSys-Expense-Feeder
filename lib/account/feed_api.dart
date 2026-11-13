@@ -151,6 +151,26 @@ class JjFeedClient {
     return [for (final r in (results as List? ?? const [])) (r as Map).cast<String, Object?>()];
   }
 
+  /// Takes back up to 100 rows this phone sent earlier and no longer stands
+  /// behind (the parser now ignores the message, or the transaction was
+  /// deleted). Returns the server's per-row answers.
+  Future<List<Map<String, Object?>>> withdrawRows({
+    required String token,
+    required String deviceId,
+    required List<String> clientMessageIds,
+  }) async {
+    final res = await _call(
+      () => _http.post(
+        _base.resolve('/api/feed/rows/withdraw'),
+        headers: {..._auth(token), 'content-type': 'application/json', 'x-device-id': deviceId},
+        body: jsonEncode({'client_message_ids': clientMessageIds}),
+      ),
+      timeout: const Duration(seconds: 45),
+    );
+    final results = _json(res)['results'];
+    return [for (final r in (results as List? ?? const [])) (r as Map).cast<String, Object?>()];
+  }
+
   Map<String, String> _auth(String token) => {'authorization': 'Bearer $token'};
 
   Future<http.Response> _call(Future<http.Response> Function() send, {Duration? timeout}) async {
