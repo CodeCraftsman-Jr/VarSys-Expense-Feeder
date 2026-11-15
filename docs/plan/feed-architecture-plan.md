@@ -809,12 +809,24 @@ and matching uploaded rows to expenses and income a member already entered (`fee
 `match_method = amount_time`, alpha or beta runs it after each upload; unlinking is remembered in
 `feed_match_unlinks`). Events, lots, pairs and the review queue are not built.
 
+Current review-flow decision (2026-11-14): MoneyTrail uploads each transaction and its original
+source messages. It does not combine separate members' sender and receiver alerts. Joint Journey
+keeps those rows independent in Transactions > Review; alpha/beta inspect the source text and decide
+whether to link an existing ledger row, add a missing transaction, or leave it for later. Transfer
+kind is a phone-side hint only. Automatic matching and write-through are disabled in the current
+implementation; older phase descriptions below are design history, not current behavior.
+
+The additive database migration `2026-11-14-feed-row-raw-messages.sql` adds `raw_messages` JSONB to
+`feed_rows`, storing each source, external id, sender, complete message body and receive timestamp.
+Previously uploaded rows have no recoverable source body; MoneyTrail re-sends its delivered outbox
+rows once so the API can enrich them from messages still available on the phone.
+
 Changes in this revision (migration `2026-11-13-feed-write-through.sql`):
 
 | Item | Change |
 |---|---|
-| Transfer kind (2.2) | The phone sends `transfer_kind` per row: `self` and `card_bill` from its transfer detection, `p2p` when the parser saw a payment to a person, else `none`. The phone does not store the person-to-person flag, so it re-reads the stored message at upload. Rows uploaded before this get it on a one-time re-send; the server fills a missing kind on `already_received`. |
-| Write-through (5.8) | After linking, every unlinked row that is a debit, `transfer_kind = none`, not `needs_review`, not ATM, not unlinked by a person, and older than the 30-minute settle window (5.7) becomes an expense: spender (`member_user_id`) = phone owner, amount in INR, mode mapped to the expense modes (card left empty), category from the phone's hint by name, notes = merchant, `statement_text` = the SMS line. The link is a `feed_matches` row with `match_method = auto_write`. One payment seen by two phones (same reference and amount) is written once. At most 200 per run; the next upload continues. Credits are linked to income, never written. `p2p` and transfer rows stay unwritten until phase 3 pairs them. |
+| Transfer kind (2.2) | The phone sends `transfer_kind` per row as a hint. Joint Journey displays it for alpha/beta review and never uses it to combine member alerts automatically. |
+| Write-through (5.8) | Not active in the current implementation. Feed rows remain outside the ledger until alpha/beta explicitly links one to an existing ledger row or approves adding it. The phone owner is retained as the `member_user_id` when a new row is approved. |
 | Actor (4.12 deferred) | The feed-matcher service user does not exist yet. Write-through runs as the alpha or beta member whose upload or match call triggered it (`expenses.user_id`), inside their RLS context; uploads from gamma phones are written on the next alpha or beta run. The service user and the nightly job (5.10) remain to build. |
 | Notifications | `statement_text` set means the activity trigger and push skip these rows, so a backfill does not notify the team once per SMS. |
 | Corrections (4.3, partly) | When the phone no longer produces a row it sent (the parser now ignores the message, the member deleted the transaction, merging changed it), it calls `POST /api/feed/rows/withdraw`. The row becomes `withdrawn` and is never matched or written; its link is removed (alpha or beta) and an `auto_write` expense is deleted (alpha). A withdrawn row the phone sends again comes back as `new`. The phone refuses to withdraw more than a quarter of what it sent (over 20 rows) in one run. Category and note annotations stay as planned. |

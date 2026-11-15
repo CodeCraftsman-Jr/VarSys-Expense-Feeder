@@ -17,6 +17,21 @@ class TxnView {
   final Account? account;
 }
 
+/// Metadata for a feed upload. Its large payload is fetched only when a member
+/// opens the transaction's sent-payload details.
+class FeedUploadSummary {
+  const FeedUploadSummary({required this.teamId, required this.clientMessageId, required this.transactionId,
+    required this.status, required this.reason, required this.serverId, required this.appVersion, required this.uploadedAt});
+  final String teamId;
+  final String clientMessageId;
+  final int? transactionId;
+  final String status;
+  final String? reason;
+  final int? serverId;
+  final String appVersion;
+  final DateTime uploadedAt;
+}
+
 extension TxnMoney on Transaction {
   /// Amount in minor units of [home]: the amount itself for a [home]
   /// transaction, the recorded conversion for a foreign one, or null when
@@ -43,7 +58,7 @@ class AppDatabase extends _$AppDatabase {
   static const protectedCategories = {'Transfers', 'Other'};
 
   @override
-  int get schemaVersion => 5;
+  int get schemaVersion => 6;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -52,6 +67,7 @@ class AppDatabase extends _$AppDatabase {
       await customStatement('CREATE INDEX idx_txn_time ON transactions (occurred_at)');
       await customStatement('CREATE INDEX idx_txn_amount ON transactions (amount_minor, direction)');
       await customStatement('CREATE INDEX idx_txn_ref ON transactions (reference)');
+      await customStatement('CREATE INDEX idx_feed_uploads_team_time ON feed_uploads (team_id, uploaded_at DESC)');
       await _seedCategories();
     },
     onUpgrade: (m, from, to) async {
@@ -78,6 +94,11 @@ class AppDatabase extends _$AppDatabase {
       }
       // v5: Joint Journey feed upload state.
       if (from < 5) await m.createTable(feedUploads);
+      // v6: exact payload snapshot for local per-transaction sync history.
+      if (from < 6) {
+        await m.addColumn(feedUploads, feedUploads.payloadJson);
+        await customStatement('CREATE INDEX IF NOT EXISTS idx_feed_uploads_team_time ON feed_uploads (team_id, uploaded_at DESC)');
+      }
     },
     beforeOpen: (details) async {
       await customStatement('PRAGMA foreign_keys = ON');
@@ -542,5 +563,48 @@ class AppDatabase extends _$AppDatabase {
   Future<void> resetImported() => transaction(() async {
     await delete(rawMessages).go();
     await delete(transactions).go();
+    await (update(feedUploads)).write(const FeedUploadsCompanion(payloadJson: Value(null)));
   });
+
+  /// Watches only upload metadata for the active Activity list. Payload JSON
+  /// stays out of this query and is loaded separately for one transaction.
+  Stream<List<FeedUploadSummary>> watchFeedUploadSummaries(String teamId) => customSelect(
+    'SELECT team_id, client_message_id, transaction_id, status, reason, server_id, app_version, uploaded_at '
+    'FROM feed_uploads WHERE team_id = ? AND transaction_id IN '
+    '(SELECT id FROM transactions ORDER BY occurred_at DESC, id DESC LIMIT 2000) '
+    'ORDER BY uploaded_at DESC, client_message_id DESC',
+    variables: [Variable.withString(teamId)],
+    readsFrom: {feedUploads, transactions},
+  ).watch().map((rows) => [for (final row in rows) _feedUploadSummary(row)]);
+
+  Future<FeedUploadSummary?> feedUploadForTransaction(String teamId, int transactionId) async {
+    final row = await customSelect(
+      'SELECT team_id, client_message_id, transaction_id, status, reason, server_id, app_version, uploaded_at '
+      'FROM feed_uploads WHERE team_id = ? AND transaction_id = ? '
+      'ORDER BY uploaded_at DESC, client_message_id DESC LIMIT 1',
+      variables: [Variable.withString(teamId), Variable.withInt(transactionId)],
+      readsFrom: {feedUploads},
+    ).getSingleOrNull();
+    return row == null ? null : _feedUploadSummary(row);
+  }
+
+  FeedUploadSummary _feedUploadSummary(TypedResult row) => FeedUploadSummary(
+    teamId: row.read<String>('team_id'),
+    clientMessageId: row.read<String>('client_message_id'),
+    transactionId: row.readNullable<int>('transaction_id'),
+    status: row.read<String>('status'),
+    reason: row.readNullable<String>('reason'),
+    serverId: row.readNullable<int>('server_id'),
+    appVersion: row.read<String>('app_version'),
+    uploadedAt: row.read<DateTime>('uploaded_at'),
+  );
+
+  Future<String?> feedUploadPayload(String teamId, String clientMessageId) async {
+    final row = await customSelect(
+      'SELECT payload_json FROM feed_uploads WHERE team_id = ? AND client_message_id = ? LIMIT 1',
+      variables: [Variable.withString(teamId), Variable.withString(clientMessageId)],
+      readsFrom: {feedUploads},
+    ).getSingleOrNull();
+    return row?.readNullable<String>('payload_json');
+  }
 }

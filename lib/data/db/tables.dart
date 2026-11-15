@@ -160,6 +160,9 @@ class FeedUploads extends Table {
   TextColumn get appVersion => text()();
   DateTimeColumn get uploadedAt => dateTime()();
 
+  /// Exact row object included in the request, stored in encrypted local DB.
+  TextColumn get payloadJson => text().nullable()();
+
   @override
   Set<Column> get primaryKey => {teamId, clientMessageId};
 }

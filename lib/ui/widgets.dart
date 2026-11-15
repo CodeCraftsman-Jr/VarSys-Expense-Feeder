@@ -6,6 +6,7 @@ import '../core/format.dart';
 import '../core/theme/category_icons.dart';
 import '../core/theme/palette.dart';
 import '../data/db/database.dart';
+import '../features/activity/feed_upload_status.dart';
 
 extension ThemeX on BuildContext {
   ThemeData get theme => Theme.of(this);
@@ -83,11 +84,12 @@ String txnTitle(Transaction t) =>
     t.merchant ?? t.counterparty ?? (t.direction == TxnDirection.credit ? 'Money received' : 'Payment');
 
 class TransactionTile extends StatelessWidget {
-  const TransactionTile({super.key, required this.view, this.onTap, this.showDate = false});
+  const TransactionTile({super.key, required this.view, this.onTap, this.showDate = false, this.feedUpload});
 
   final TxnView view;
   final VoidCallback? onTap;
   final bool showDate;
+  final FeedUploadSummary? feedUpload;
 
   @override
   Widget build(BuildContext context) {
@@ -135,6 +137,10 @@ class TransactionTile extends StatelessWidget {
                     overflow: TextOverflow.ellipsis,
                     style: context.text.bodySmall?.copyWith(color: context.colors.onSurfaceVariant),
                   ),
+                  if (feedUpload != null) ...[
+                    const SizedBox(height: 4),
+                    FeedUploadStatusIndicator(summary: feedUpload!, compact: true),
+                  ],
                 ],
               ),
             ),

@@ -14,9 +14,11 @@ abstract final class FeedPrefKeys {
   /// client_message_id so two phones of one member never collide.
   static const installId = 'feed.install_id';
 
-  /// Set once every row sent before `transfer_kind` existed was sent again
-  /// with it.
-  static const transferKindSent = 'feed.transfer_kind_sent';
+  /// Set once every row sent before the full source-message payload existed
+  /// was sent again with it.
+  static const fullMessagesSent = 'feed.full_messages_sent';
+  @Deprecated('The one-time resend now refreshes the complete message payload.')
+  static const transferKindSent = fullMessagesSent;
 }
 
 class FeedSyncState {
@@ -92,7 +94,7 @@ class FeedSyncController extends Notifier<FeedSyncState> {
       }
       final prefs = ref.read(prefsProvider);
       final runStart = DateTime.now();
-      final resendBefore = (prefs.getBool(FeedPrefKeys.transferKindSent) ?? false) ? null : runStart;
+      final resendBefore = (prefs.getBool(FeedPrefKeys.fullMessagesSent) ?? false) ? null : runStart;
       // Each pass records every answer, so the next pass moves on; the cap
       // only guards against a server that never records anything.
       for (var pass = 0; pass < 200; pass++) {
@@ -108,13 +110,18 @@ class FeedSyncController extends Notifier<FeedSyncState> {
           rows: [for (final r in batch.rows) r.json],
         );
         final results = [for (final a in answers) FeedRowResult.fromJson(a)];
-        await outbox.record(profile.teamId, {for (final r in batch.rows) r.clientMessageId: r.transactionId}, results);
+        await outbox.record(
+          profile.teamId,
+          {for (final r in batch.rows) r.clientMessageId: r.transactionId},
+          results,
+          payloadByCmid: {for (final r in batch.rows) r.clientMessageId: r.json},
+        );
         sent += results.where((r) => r.status == 'accepted' || r.status == 'already_received').length;
         if (!ref.mounted) return;
         state = FeedSyncState(running: true, settings: settings, sent: sent, pending: batch.pending - batch.rows.length, lastRun: state.lastRun);
         if (batch.pending <= batch.rows.length) break;
       }
-      if (resendBefore != null) await prefs.setBool(FeedPrefKeys.transferKindSent, true);
+      if (resendBefore != null) await prefs.setBool(FeedPrefKeys.fullMessagesSent, true);
       final withdrawn = await _withdraw(outbox, profile.teamId, token, deviceId);
       final left = (await outbox.pending(teamId: profile.teamId, from: settings.backfillStart, limit: 0)).pending;
       if (!ref.mounted) return;

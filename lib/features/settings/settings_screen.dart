@@ -114,24 +114,24 @@ class SettingsScreen extends ConsumerWidget {
                 children: [
                   ListTile(
                     leading: const Icon(PhosphorIconsRegular.shieldCheck),
-                    title: const Text('Parsed on this phone'),
+                    title: const Text('Team feed data'),
                     subtitle: const Text(
-                      'Message text never leaves the phone. While your team feed is on, each parsed '
-                      'transaction (amount, date, bank, mode, merchant) goes to Joint Journey.',
+                      'While your team feed is on, parsed transaction fields and original SMS or email message '
+                      'text are sent to Joint Journey. Recent request details are saved in this phone’s encrypted database.',
                     ),
                   ),
                   const DataExportTiles(),
                   ListTile(
                     leading: const Icon(PhosphorIconsRegular.trash, color: Palette.red),
                     title: const Text('Reset imported data'),
-                    subtitle: const Text('Clears transactions & messages; keeps categories and rules'),
+                    subtitle: const Text('Clears transactions, messages and saved payloads; keeps upload status, categories and rules'),
                     onTap: () async {
                       final ok = await showDialog<bool>(
                         context: context,
                         builder: (c) => AlertDialog(
                           title: const Text('Reset imported data?'),
                           content: const Text(
-                            'All transactions and parsed messages will be deleted. '
+                            'All transactions, parsed messages and saved request payloads will be deleted. '
                             'You can re-import SMS afterwards.',
                           ),
                           actions: [

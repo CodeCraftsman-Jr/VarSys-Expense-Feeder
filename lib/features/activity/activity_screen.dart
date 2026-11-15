@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../account/account_providers.dart';
 import '../../core/theme/icons.dart';
 
 import '../../core/format.dart';
@@ -58,6 +59,10 @@ class _ActivityScreenState extends ConsumerState<ActivityScreen> {
   @override
   Widget build(BuildContext context) {
     final txns = ref.watch(allTxnsProvider);
+    final teamId = ref.watch(accountProvider.select((state) => state.profile?.teamId));
+    final feedUploads = teamId == null
+        ? const <int, FeedUploadSummary>{}
+        : ref.watch(feedUploadSummariesProvider(teamId)).value ?? const <int, FeedUploadSummary>{};
     final anyForeign = _filter == ActivityFilter.foreign || (txns.value?.any((v) => v.txn.isForeign) ?? false);
     return Scaffold(
       body: SafeArea(
@@ -125,7 +130,7 @@ class _ActivityScreenState extends ConsumerState<ActivityScreen> {
                       ],
                     );
                   }
-                  return _GroupedList(list: list);
+                  return _GroupedList(list: list, feedUploads: feedUploads);
                 },
               ),
             ),
@@ -137,8 +142,9 @@ class _ActivityScreenState extends ConsumerState<ActivityScreen> {
 }
 
 class _GroupedList extends StatelessWidget {
-  const _GroupedList({required this.list});
+  const _GroupedList({required this.list, required this.feedUploads});
   final List<TxnView> list;
+  final Map<int, FeedUploadSummary> feedUploads;
 
   @override
   Widget build(BuildContext context) {
@@ -189,7 +195,11 @@ class _GroupedList extends StatelessWidget {
           );
         }
         final v = item as TxnView;
-        return TransactionTile(view: v, onTap: () => showTransactionSheet(context, v.txn.id));
+        return TransactionTile(
+          view: v,
+          feedUpload: feedUploads[v.txn.id],
+          onTap: () => showTransactionSheet(context, v.txn.id),
+        );
       },
     );
   }

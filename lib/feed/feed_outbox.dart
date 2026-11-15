@@ -55,7 +55,7 @@ class FeedOutbox {
 
   /// Rows still to send. With [resendDeliveredBefore], rows the server
   /// already has, last sent before that time, are sent again too (once, so it
-  /// learns fields added later, such as `transfer_kind`); the server answers
+  /// learns fields added later, such as original message bodies); the server answers
   /// `already_received` and fills them in. Recording the answer moves their
   /// time past the cut-off, so a run always moves on.
   Future<({List<FeedOutboxRow> rows, int pending})> pending({
@@ -65,8 +65,16 @@ class FeedOutbox {
     DateTime? resendDeliveredBefore,
   }) async {
     final uploads = {
-      for (final u in await (db.select(db.feedUploads)..where((u) => u.teamId.equals(teamId))).get())
-        u.clientMessageId: u,
+      for (final u in await db.customSelect(
+        'SELECT client_message_id, status, app_version, uploaded_at FROM feed_uploads WHERE team_id = ?',
+        variables: [Variable.withString(teamId)],
+        readsFrom: {db.feedUploads},
+      ).get())
+        u.read<String>('client_message_id'): (
+          status: u.read<String>('status'),
+          appVersion: u.read<String>('app_version'),
+          uploadedAt: u.read<DateTime>('uploaded_at'),
+        ),
     };
     final messages = await (db.select(db.rawMessages)
           ..where((m) => m.transactionId.isNotNull() & m.source.isInValues([SourceKind.sms, SourceKind.email])))
@@ -130,6 +138,16 @@ class FeedOutbox {
     return {
       'client_message_id': cmid,
       'message_ids': ids,
+      'raw_messages': [
+        for (final m in msgs)
+          {
+            'source': m.source.name,
+            'external_id': m.externalId,
+            'sender': m.sender,
+            'body': m.body,
+            'received_at': m.receivedAt.toUtc().toIso8601String(),
+          },
+      ],
       'amount_minor': t.amountMinor,
       'currency': t.currency,
       'converted_minor': hasConversion ? t.convertedMinor : null,
@@ -183,13 +201,15 @@ class FeedOutbox {
   /// [delivered] is how many rows the server holds from this phone, so the
   /// caller can refuse a suspiciously large withdrawal.
   Future<({List<String> ids, int delivered})> withdrawable(String teamId) async {
-    final sent = await (db.select(db.feedUploads)
-          ..where((u) => u.teamId.equals(teamId) & u.status.isIn(FeedOutbox.delivered)))
+    final sent = await (db.selectOnly(db.feedUploads)
+          ..addColumns([db.feedUploads.clientMessageId])
+          ..where(db.feedUploads.teamId.equals(teamId) & db.feedUploads.status.isIn(FeedOutbox.delivered)))
+        .map((row) => row.read(db.feedUploads.clientMessageId)!)
         .get();
     if (sent.isEmpty) return (ids: const <String>[], delivered: 0);
     final current = await currentMessageIds();
     return (
-      ids: [for (final u in sent) if (!current.contains(u.clientMessageId)) u.clientMessageId],
+      ids: [for (final id in sent) if (!current.contains(id)) id],
       delivered: sent.length,
     );
   }
@@ -223,7 +243,12 @@ class FeedOutbox {
   }
 
   /// Records the server's answer for each sent row.
-  Future<void> record(String teamId, Map<String, int> txnByCmid, List<FeedRowResult> results) async {
+  Future<void> record(
+    String teamId,
+    Map<String, int> txnByCmid,
+    List<FeedRowResult> results, {
+    required Map<String, Map<String, Object?>> payloadByCmid,
+  }) async {
     final now = DateTime.now();
     await db.batch((b) {
       for (final r in results) {
@@ -239,6 +264,9 @@ class FeedOutbox {
             serverId: Value(r.id),
             appVersion: appVersion,
             uploadedAt: now,
+            payloadJson: Value(payloadByCmid[r.clientMessageId] == null
+                ? null
+                : jsonEncode(payloadByCmid[r.clientMessageId])),
           ),
           mode: InsertMode.insertOrReplace,
         );

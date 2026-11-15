@@ -341,6 +341,22 @@ final allTxnsProvider = StreamProvider<List<TxnView>>((ref) {
   return ref.watch(databaseProvider).watchTxns(limit: 2000);
 });
 
+/// Latest upload result per Activity transaction, without the stored payload.
+final feedUploadSummariesProvider = StreamProvider.family<Map<int, FeedUploadSummary>, String>((ref, teamId) {
+  return ref.watch(databaseProvider).watchFeedUploadSummaries(teamId).map((rows) {
+    final latest = <int, FeedUploadSummary>{};
+    for (final row in rows) {
+      final transactionId = row.transactionId;
+      if (transactionId != null) latest.putIfAbsent(transactionId, () => row);
+    }
+    return latest;
+  });
+});
+
+final feedUploadForTransactionProvider = FutureProvider.family<FeedUploadSummary?, ({String teamId, int transactionId})>(
+  (ref, key) => ref.watch(databaseProvider).feedUploadForTransaction(key.teamId, key.transactionId),
+);
+
 final categoriesProvider = StreamProvider<List<Category>>((ref) => ref.watch(databaseProvider).watchCategories());
 
 final accountsProvider = StreamProvider<List<Account>>((ref) => ref.watch(databaseProvider).watchAccounts());

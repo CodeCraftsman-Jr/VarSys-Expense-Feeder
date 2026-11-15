@@ -3518,6 +3518,17 @@ class $FeedUploadsTable extends FeedUploads
     type: DriftSqlType.dateTime,
     requiredDuringInsert: true,
   );
+  static const VerificationMeta _payloadJsonMeta = const VerificationMeta(
+    'payloadJson',
+  );
+  @override
+  late final GeneratedColumn<String> payloadJson = GeneratedColumn<String>(
+    'payload_json',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
   @override
   List<GeneratedColumn> get $columns => [
     teamId,
@@ -3528,6 +3539,7 @@ class $FeedUploadsTable extends FeedUploads
     serverId,
     appVersion,
     uploadedAt,
+    payloadJson,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -3605,6 +3617,15 @@ class $FeedUploadsTable extends FeedUploads
     } else if (isInserting) {
       context.missing(_uploadedAtMeta);
     }
+    if (data.containsKey('payload_json')) {
+      context.handle(
+        _payloadJsonMeta,
+        payloadJson.isAcceptableOrUnknown(
+          data['payload_json']!,
+          _payloadJsonMeta,
+        ),
+      );
+    }
     return context;
   }
 
@@ -3646,6 +3667,10 @@ class $FeedUploadsTable extends FeedUploads
         DriftSqlType.dateTime,
         data['${effectivePrefix}uploaded_at'],
       )!,
+      payloadJson: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}payload_json'],
+      ),
     );
   }
 
@@ -3673,6 +3698,10 @@ class FeedUpload extends DataClass implements Insertable<FeedUpload> {
   /// an update.
   final String appVersion;
   final DateTime uploadedAt;
+
+  /// Exact row object included in the request. Stored in the encrypted local
+  /// database so the member can inspect the historic send, not a reconstruction.
+  final String? payloadJson;
   const FeedUpload({
     required this.teamId,
     required this.clientMessageId,
@@ -3682,6 +3711,7 @@ class FeedUpload extends DataClass implements Insertable<FeedUpload> {
     this.serverId,
     required this.appVersion,
     required this.uploadedAt,
+    this.payloadJson,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -3700,6 +3730,9 @@ class FeedUpload extends DataClass implements Insertable<FeedUpload> {
     }
     map['app_version'] = Variable<String>(appVersion);
     map['uploaded_at'] = Variable<DateTime>(uploadedAt);
+    if (!nullToAbsent || payloadJson != null) {
+      map['payload_json'] = Variable<String>(payloadJson);
+    }
     return map;
   }
 
@@ -3719,6 +3752,9 @@ class FeedUpload extends DataClass implements Insertable<FeedUpload> {
           : Value(serverId),
       appVersion: Value(appVersion),
       uploadedAt: Value(uploadedAt),
+      payloadJson: payloadJson == null && nullToAbsent
+          ? const Value.absent()
+          : Value(payloadJson),
     );
   }
 
@@ -3736,6 +3772,7 @@ class FeedUpload extends DataClass implements Insertable<FeedUpload> {
       serverId: serializer.fromJson<int?>(json['serverId']),
       appVersion: serializer.fromJson<String>(json['appVersion']),
       uploadedAt: serializer.fromJson<DateTime>(json['uploadedAt']),
+      payloadJson: serializer.fromJson<String?>(json['payloadJson']),
     );
   }
   @override
@@ -3750,6 +3787,7 @@ class FeedUpload extends DataClass implements Insertable<FeedUpload> {
       'serverId': serializer.toJson<int?>(serverId),
       'appVersion': serializer.toJson<String>(appVersion),
       'uploadedAt': serializer.toJson<DateTime>(uploadedAt),
+      'payloadJson': serializer.toJson<String?>(payloadJson),
     };
   }
 
@@ -3762,6 +3800,7 @@ class FeedUpload extends DataClass implements Insertable<FeedUpload> {
     Value<int?> serverId = const Value.absent(),
     String? appVersion,
     DateTime? uploadedAt,
+    Value<String?> payloadJson = const Value.absent(),
   }) => FeedUpload(
     teamId: teamId ?? this.teamId,
     clientMessageId: clientMessageId ?? this.clientMessageId,
@@ -3773,6 +3812,7 @@ class FeedUpload extends DataClass implements Insertable<FeedUpload> {
     serverId: serverId.present ? serverId.value : this.serverId,
     appVersion: appVersion ?? this.appVersion,
     uploadedAt: uploadedAt ?? this.uploadedAt,
+    payloadJson: payloadJson.present ? payloadJson.value : this.payloadJson,
   );
   FeedUpload copyWithCompanion(FeedUploadsCompanion data) {
     return FeedUpload(
@@ -3792,6 +3832,9 @@ class FeedUpload extends DataClass implements Insertable<FeedUpload> {
       uploadedAt: data.uploadedAt.present
           ? data.uploadedAt.value
           : this.uploadedAt,
+      payloadJson: data.payloadJson.present
+          ? data.payloadJson.value
+          : this.payloadJson,
     );
   }
 
@@ -3805,7 +3848,8 @@ class FeedUpload extends DataClass implements Insertable<FeedUpload> {
           ..write('reason: $reason, ')
           ..write('serverId: $serverId, ')
           ..write('appVersion: $appVersion, ')
-          ..write('uploadedAt: $uploadedAt')
+          ..write('uploadedAt: $uploadedAt, ')
+          ..write('payloadJson: $payloadJson')
           ..write(')'))
         .toString();
   }
@@ -3820,6 +3864,7 @@ class FeedUpload extends DataClass implements Insertable<FeedUpload> {
     serverId,
     appVersion,
     uploadedAt,
+    payloadJson,
   );
   @override
   bool operator ==(Object other) =>
@@ -3832,7 +3877,8 @@ class FeedUpload extends DataClass implements Insertable<FeedUpload> {
           other.reason == this.reason &&
           other.serverId == this.serverId &&
           other.appVersion == this.appVersion &&
-          other.uploadedAt == this.uploadedAt);
+          other.uploadedAt == this.uploadedAt &&
+          other.payloadJson == this.payloadJson);
 }
 
 class FeedUploadsCompanion extends UpdateCompanion<FeedUpload> {
@@ -3844,6 +3890,7 @@ class FeedUploadsCompanion extends UpdateCompanion<FeedUpload> {
   final Value<int?> serverId;
   final Value<String> appVersion;
   final Value<DateTime> uploadedAt;
+  final Value<String?> payloadJson;
   final Value<int> rowid;
   const FeedUploadsCompanion({
     this.teamId = const Value.absent(),
@@ -3854,6 +3901,7 @@ class FeedUploadsCompanion extends UpdateCompanion<FeedUpload> {
     this.serverId = const Value.absent(),
     this.appVersion = const Value.absent(),
     this.uploadedAt = const Value.absent(),
+    this.payloadJson = const Value.absent(),
     this.rowid = const Value.absent(),
   });
   FeedUploadsCompanion.insert({
@@ -3865,6 +3913,7 @@ class FeedUploadsCompanion extends UpdateCompanion<FeedUpload> {
     this.serverId = const Value.absent(),
     required String appVersion,
     required DateTime uploadedAt,
+    this.payloadJson = const Value.absent(),
     this.rowid = const Value.absent(),
   }) : teamId = Value(teamId),
        clientMessageId = Value(clientMessageId),
@@ -3880,6 +3929,7 @@ class FeedUploadsCompanion extends UpdateCompanion<FeedUpload> {
     Expression<int>? serverId,
     Expression<String>? appVersion,
     Expression<DateTime>? uploadedAt,
+    Expression<String>? payloadJson,
     Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
@@ -3891,6 +3941,7 @@ class FeedUploadsCompanion extends UpdateCompanion<FeedUpload> {
       if (serverId != null) 'server_id': serverId,
       if (appVersion != null) 'app_version': appVersion,
       if (uploadedAt != null) 'uploaded_at': uploadedAt,
+      if (payloadJson != null) 'payload_json': payloadJson,
       if (rowid != null) 'rowid': rowid,
     });
   }
@@ -3904,6 +3955,7 @@ class FeedUploadsCompanion extends UpdateCompanion<FeedUpload> {
     Value<int?>? serverId,
     Value<String>? appVersion,
     Value<DateTime>? uploadedAt,
+    Value<String?>? payloadJson,
     Value<int>? rowid,
   }) {
     return FeedUploadsCompanion(
@@ -3915,6 +3967,7 @@ class FeedUploadsCompanion extends UpdateCompanion<FeedUpload> {
       serverId: serverId ?? this.serverId,
       appVersion: appVersion ?? this.appVersion,
       uploadedAt: uploadedAt ?? this.uploadedAt,
+      payloadJson: payloadJson ?? this.payloadJson,
       rowid: rowid ?? this.rowid,
     );
   }
@@ -3946,6 +3999,9 @@ class FeedUploadsCompanion extends UpdateCompanion<FeedUpload> {
     if (uploadedAt.present) {
       map['uploaded_at'] = Variable<DateTime>(uploadedAt.value);
     }
+    if (payloadJson.present) {
+      map['payload_json'] = Variable<String>(payloadJson.value);
+    }
     if (rowid.present) {
       map['rowid'] = Variable<int>(rowid.value);
     }
@@ -3963,6 +4019,7 @@ class FeedUploadsCompanion extends UpdateCompanion<FeedUpload> {
           ..write('serverId: $serverId, ')
           ..write('appVersion: $appVersion, ')
           ..write('uploadedAt: $uploadedAt, ')
+          ..write('payloadJson: $payloadJson, ')
           ..write('rowid: $rowid')
           ..write(')'))
         .toString();
@@ -6734,6 +6791,7 @@ typedef $$FeedUploadsTableCreateCompanionBuilder =
       Value<int?> serverId,
       required String appVersion,
       required DateTime uploadedAt,
+      Value<String?> payloadJson,
       Value<int> rowid,
     });
 typedef $$FeedUploadsTableUpdateCompanionBuilder =
@@ -6746,6 +6804,7 @@ typedef $$FeedUploadsTableUpdateCompanionBuilder =
       Value<int?> serverId,
       Value<String> appVersion,
       Value<DateTime> uploadedAt,
+      Value<String?> payloadJson,
       Value<int> rowid,
     });
 
@@ -6795,6 +6854,11 @@ class $$FeedUploadsTableFilterComposer
 
   ColumnFilters<DateTime> get uploadedAt => $composableBuilder(
     column: $table.uploadedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get payloadJson => $composableBuilder(
+    column: $table.payloadJson,
     builder: (column) => ColumnFilters(column),
   );
 }
@@ -6847,6 +6911,11 @@ class $$FeedUploadsTableOrderingComposer
     column: $table.uploadedAt,
     builder: (column) => ColumnOrderings(column),
   );
+
+  ColumnOrderings<String> get payloadJson => $composableBuilder(
+    column: $table.payloadJson,
+    builder: (column) => ColumnOrderings(column),
+  );
 }
 
 class $$FeedUploadsTableAnnotationComposer
@@ -6887,6 +6956,11 @@ class $$FeedUploadsTableAnnotationComposer
 
   GeneratedColumn<DateTime> get uploadedAt => $composableBuilder(
     column: $table.uploadedAt,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get payloadJson => $composableBuilder(
+    column: $table.payloadJson,
     builder: (column) => column,
   );
 }
@@ -6930,6 +7004,7 @@ class $$FeedUploadsTableTableManager
                 Value<int?> serverId = const Value.absent(),
                 Value<String> appVersion = const Value.absent(),
                 Value<DateTime> uploadedAt = const Value.absent(),
+                Value<String?> payloadJson = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => FeedUploadsCompanion(
                 teamId: teamId,
@@ -6940,6 +7015,7 @@ class $$FeedUploadsTableTableManager
                 serverId: serverId,
                 appVersion: appVersion,
                 uploadedAt: uploadedAt,
+                payloadJson: payloadJson,
                 rowid: rowid,
               ),
           createCompanionCallback:
@@ -6952,6 +7028,7 @@ class $$FeedUploadsTableTableManager
                 Value<int?> serverId = const Value.absent(),
                 required String appVersion,
                 required DateTime uploadedAt,
+                Value<String?> payloadJson = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => FeedUploadsCompanion.insert(
                 teamId: teamId,
@@ -6962,6 +7039,7 @@ class $$FeedUploadsTableTableManager
                 serverId: serverId,
                 appVersion: appVersion,
                 uploadedAt: uploadedAt,
+                payloadJson: payloadJson,
                 rowid: rowid,
               ),
           withReferenceMapper: (p0) => p0
