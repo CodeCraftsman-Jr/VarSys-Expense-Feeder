@@ -85,6 +85,30 @@ class FeedSyncController extends Notifier<FeedSyncState> {
     try {
       settings = await client.settings(token);
       final outbox = await _outbox();
+      // Review decisions are independent of the team's upload switch. Keep this
+      // pull available so existing rows can still be completed on the phone.
+      final deliveredIds = await outbox.deliveredMessageIds(profile.teamId);
+      final confirmedIds = await ref.read(databaseProvider).confirmedFeedMessageIds(profile.teamId);
+      final stateBatchCount = deliveredIds.length > confirmedIds.length ? deliveredIds.length : confirmedIds.length;
+      for (var i = 0; i < stateBatchCount; i += 100) {
+        final chunk = i >= deliveredIds.length
+            ? const <String>[]
+            : deliveredIds.sublist(i, i + 100 > deliveredIds.length ? deliveredIds.length : i + 100);
+        final confirmedChunk = i >= confirmedIds.length
+            ? const <String>[]
+            : confirmedIds.sublist(i, i + 100 > confirmedIds.length ? confirmedIds.length : i + 100);
+        final remote = await client.reviewStates(
+          token: token,
+          deviceId: deviceId,
+          clientMessageIds: chunk,
+          confirmedClientMessageIds: confirmedChunk,
+        );
+        await ref.read(databaseProvider).confirmFeedReviewRows(profile.teamId, [
+          for (final row in remote)
+            if (row['review_state'] == 'confirmed' || row['review_state'] == 'added' || row['review_state'] == 'linked')
+              row['client_message_id'] as String,
+        ]);
+      }
       if (!settings.enabled) {
         final waiting = (await outbox.pending(teamId: profile.teamId, from: settings.backfillStart, limit: 0)).pending;
         if (!ref.mounted) return;

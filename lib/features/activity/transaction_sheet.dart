@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -11,6 +12,7 @@ import '../../core/theme/icons.dart';
 import '../../core/format.dart';
 import '../../core/theme/palette.dart';
 import '../../data/db/database.dart';
+import '../../feed/feed_sync.dart';
 import '../../providers.dart';
 import '../../ui/widgets.dart';
 import 'feed_upload_status.dart';
@@ -23,6 +25,7 @@ Future<void> showTransactionSheet(BuildContext context, int id) => showModalBott
   context: context,
   isScrollControlled: true,
   useSafeArea: true,
+  useRootNavigator: true,
   builder: (_) => DraggableScrollableSheet(
     expand: false,
     initialChildSize: 0.75,
@@ -163,7 +166,13 @@ class TransactionSheet extends ConsumerWidget {
                 const Icon(PhosphorIconsFill.warningCircle, color: Palette.amber),
                 const SizedBox(width: 12),
                 const Expanded(child: Text('Parsed with low confidence. Does this look right?')),
-                TextButton(onPressed: () => db.confirm(id), child: const Text('Looks right')),
+                TextButton(
+                  onPressed: () async {
+                    await db.confirm(id);
+                    if (context.mounted) unawaited(ref.read(feedSyncProvider.notifier).run());
+                  },
+                  child: const Text('Looks right'),
+                ),
               ],
             ),
           ),
@@ -444,7 +453,13 @@ class _DuplicatePanel extends ConsumerWidget {
           Row(
             children: [
               Expanded(
-                child: OutlinedButton(onPressed: () => db.confirm(id), child: const Text('Keep both')),
+                child: OutlinedButton(
+                  onPressed: () async {
+                    await db.confirm(id);
+                    unawaited(ref.read(feedSyncProvider.notifier).run());
+                  },
+                  child: const Text('Keep both'),
+                ),
               ),
               const SizedBox(width: 10),
               Expanded(
@@ -455,6 +470,7 @@ class _DuplicatePanel extends ConsumerWidget {
                       : () async {
                           Navigator.pop(context);
                           await db.mergeInto(id, otherId);
+                          unawaited(ref.read(feedSyncProvider.notifier).run());
                         },
                   child: const Text('Merge'),
                 ),

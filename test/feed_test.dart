@@ -114,7 +114,7 @@ void main() {
       await box.record('t1', txns, [
         FeedRowResult(clientMessageId: p.rows[0].clientMessageId, status: 'accepted', id: 1),
         FeedRowResult(clientMessageId: p.rows[1].clientMessageId, status: 'rejected', reason: 'bad'),
-      ]);
+      ], payloadByCmid: {for (final r in p.rows) r.clientMessageId: r.json});
       expect((await box.pending(teamId: 't1')).pending, 0);
       expect((await outboxFor(db, app: '1.0.2+4').pending(teamId: 't1')).rows.single.clientMessageId, p.rows[1].clientMessageId);
       expect((await box.pending(teamId: 'another-team')).pending, 2, reason: 'uploads are per team');
@@ -152,7 +152,7 @@ void main() {
       final p = await box.pending(teamId: 't1');
       await box.record('t1', {for (final r in p.rows) r.clientMessageId: r.transactionId}, [
         for (final r in p.rows) FeedRowResult(clientMessageId: r.clientMessageId, status: 'accepted', id: 1),
-      ]);
+      ], payloadByCmid: {for (final r in p.rows) r.clientMessageId: r.json});
       expect((await box.withdrawable('t1')).ids, isEmpty);
 
       final swiggy = p.rows.firstWhere((r) => r.json['amount_minor'] == 25000);
@@ -170,14 +170,14 @@ void main() {
       final p = await box.pending(teamId: 't1');
       await box.record('t1', {for (final r in p.rows) r.clientMessageId: r.transactionId}, [
         for (final r in p.rows) FeedRowResult(clientMessageId: r.clientMessageId, status: 'accepted', id: 1),
-      ]);
+      ], payloadByCmid: {for (final r in p.rows) r.clientMessageId: r.json});
       final cut = DateTime.now().add(const Duration(seconds: 1));
       final again = await box.pending(teamId: 't1', resendDeliveredBefore: cut);
       expect(again.pending, 2);
       await Future<void>.delayed(const Duration(milliseconds: 1100));
       await box.record('t1', {for (final r in again.rows) r.clientMessageId: r.transactionId}, [
         for (final r in again.rows) FeedRowResult(clientMessageId: r.clientMessageId, status: 'already_received', id: 1),
-      ]);
+      ], payloadByCmid: {for (final r in again.rows) r.clientMessageId: r.json});
       expect((await box.pending(teamId: 't1', resendDeliveredBefore: cut)).pending, 0);
     });
 
@@ -196,6 +196,7 @@ void main() {
     late bool feedOn;
     late int rowsStatus;
     late bool down;
+    final reviewStates = <String, String>{};
 
     http.Client server() => MockClient((req) async {
       if (down && req.url.host != 'auth.varsys.co.in') throw http.ClientException('network down');
@@ -227,6 +228,14 @@ void main() {
             }),
             200,
           );
+        case '/api/feed/rows/review-state':
+          final body = jsonDecode(req.body) as Map;
+          return http.Response(jsonEncode({
+            'results': [
+              for (final id in body['client_message_ids'] as List)
+                {'client_message_id': id, 'review_state': reviewStates[id] ?? 'pending', 'reviewed_at': null},
+            ],
+          }), 200);
       }
       return http.Response('', 404);
     });
@@ -261,6 +270,7 @@ void main() {
       feedOn = false;
       rowsStatus = 200;
       down = false;
+      reviewStates.clear();
     });
     tearDown(() => db.close());
 
@@ -293,6 +303,37 @@ void main() {
       expect(await c.read(feedSyncProvider.notifier).setTeamFeed(true), isNull);
       await c.read(feedSyncProvider.notifier).run();
       expect(c.read(feedSyncProvider).pending, 0);
+    });
+
+    test('pulls web review decisions into the matching local transaction', () async {
+      feedOn = true;
+      final c = await signedIn();
+      final upload = (await db.select(db.feedUploads).get()).singleWhere((u) => u.transactionId != null);
+      final txnId = upload.transactionId!;
+      await (db.update(db.transactions)..where((t) => t.id.equals(txnId))).write(
+        const TransactionsCompanion(status: Value(TxnStatus.needsReview)),
+      );
+      reviewStates[upload.clientMessageId] = 'confirmed';
+
+      await c.read(feedSyncProvider.notifier).run();
+
+      final transaction = await (db.select(db.transactions)..where((t) => t.id.equals(txnId))).getSingle();
+      expect(transaction.status, TxnStatus.confirmed);
+      final request = requests.lastWhere((r) => r.url.path == '/api/feed/rows/review-state');
+      expect(request.headers['x-device-id'], secrets.values[AccountKeys.deviceId]);
+      expect((jsonDecode(request.body) as Map)['client_message_ids'], contains(upload.clientMessageId));
+    });
+
+    test('sends phone-confirmed ids back to the server', () async {
+      feedOn = true;
+      final c = await signedIn();
+      final upload = (await db.select(db.feedUploads).get()).firstWhere((u) => u.transactionId != null);
+      await db.confirm(upload.transactionId!);
+
+      await c.read(feedSyncProvider.notifier).run();
+
+      final request = requests.lastWhere((r) => r.url.path == '/api/feed/rows/review-state');
+      expect((jsonDecode(request.body) as Map)['confirmed_client_message_ids'], contains(upload.clientMessageId));
     });
 
     test('a removed phone keeps its rows waiting and says why', () async {
@@ -357,6 +398,8 @@ void main() {
             }),
             200,
           );
+        case '/api/feed/rows/review-state':
+          return http.Response('{"results":[]}', 200);
         case '/api/feed/rows/withdraw':
           final ids = (jsonDecode(req.body) as Map)['client_message_ids'] as List;
           return http.Response(

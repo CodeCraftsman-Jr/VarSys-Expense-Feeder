@@ -171,6 +171,28 @@ class JjFeedClient {
     return [for (final r in (results as List? ?? const [])) (r as Map).cast<String, Object?>()];
   }
 
+  /// Reads server review decisions for rows previously uploaded by this phone.
+  Future<List<Map<String, Object?>>> reviewStates({
+    required String token,
+    required String deviceId,
+    required List<String> clientMessageIds,
+    List<String> confirmedClientMessageIds = const [],
+  }) async {
+    final res = await _call(
+      () => _http.post(
+        _base.resolve('/api/feed/rows/review-state'),
+        headers: {..._auth(token), 'content-type': 'application/json', 'x-device-id': deviceId},
+        body: jsonEncode({
+          'client_message_ids': clientMessageIds,
+          'confirmed_client_message_ids': confirmedClientMessageIds,
+        }),
+      ),
+      timeout: const Duration(seconds: 45),
+    );
+    final results = _json(res)['results'];
+    return [for (final r in (results as List? ?? const [])) (r as Map).cast<String, Object?>()];
+  }
+
   Map<String, String> _auth(String token) => {'authorization': 'Bearer $token'};
 
   Future<http.Response> _call(Future<http.Response> Function() send, {Duration? timeout}) async {

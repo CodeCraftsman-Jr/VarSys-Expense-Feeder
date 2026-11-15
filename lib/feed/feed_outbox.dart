@@ -214,6 +214,15 @@ class FeedOutbox {
     );
   }
 
+  /// Previously delivered ids used to pull review outcomes on the same sync run.
+  Future<List<String>> deliveredMessageIds(String teamId) => (db.selectOnly(db.feedUploads)
+        ..addColumns([db.feedUploads.clientMessageId])
+        ..where(db.feedUploads.teamId.equals(teamId) & db.feedUploads.status.isIn(FeedOutbox.delivered))
+        ..orderBy([OrderingTerm.desc(db.feedUploads.uploadedAt)])
+        ..limit(500))
+      .map((row) => row.read(db.feedUploads.clientMessageId)!)
+      .get();
+
   /// The client message id of every transaction that would be uploaded now
   /// (ignoring the backfill date).
   Future<Set<String>> currentMessageIds() async {

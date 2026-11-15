@@ -588,7 +588,7 @@ class AppDatabase extends _$AppDatabase {
     return row == null ? null : _feedUploadSummary(row);
   }
 
-  FeedUploadSummary _feedUploadSummary(TypedResult row) => FeedUploadSummary(
+  FeedUploadSummary _feedUploadSummary(QueryRow row) => FeedUploadSummary(
     teamId: row.read<String>('team_id'),
     clientMessageId: row.read<String>('client_message_id'),
     transactionId: row.readNullable<int>('transaction_id'),
@@ -606,5 +606,33 @@ class AppDatabase extends _$AppDatabase {
       readsFrom: {feedUploads},
     ).getSingleOrNull();
     return row?.readNullable<String>('payload_json');
+  }
+
+  /// Applies a review outcome from Joint Journey to the corresponding local transaction.
+  Future<void> confirmFeedReviewRows(String teamId, Iterable<String> clientMessageIds) async {
+    final ids = clientMessageIds.toSet().toList();
+    if (ids.isEmpty) return;
+    final uploads = await (select(feedUploads)
+          ..where((u) => u.teamId.equals(teamId) & u.clientMessageId.isIn(ids)))
+        .get();
+    final transactionIds = uploads.map((u) => u.transactionId).whereType<int>().toSet().toList();
+    if (transactionIds.isEmpty) return;
+    await (update(transactions)..where((t) => t.id.isIn(transactionIds) & t.status.equalsValue(TxnStatus.needsReview))).write(
+      const TransactionsCompanion(status: Value(TxnStatus.confirmed), duplicateOfId: Value(null)),
+    );
+  }
+
+  /// Confirmed local rows let the server review queue show decisions made in MoneyTrail.
+  Future<List<String>> confirmedFeedMessageIds(String teamId) async {
+    final query = select(feedUploads).join([
+      innerJoin(transactions, transactions.id.equalsExp(feedUploads.transactionId)),
+    ])
+      ..where(feedUploads.teamId.equals(teamId) &
+          feedUploads.status.isIn(['accepted', 'already_received']) &
+          transactions.status.equalsValue(TxnStatus.confirmed))
+      ..orderBy([OrderingTerm.desc(feedUploads.uploadedAt)])
+      ..limit(500);
+    final rows = await query.get();
+    return [for (final row in rows) row.readTable(feedUploads).clientMessageId];
   }
 }
