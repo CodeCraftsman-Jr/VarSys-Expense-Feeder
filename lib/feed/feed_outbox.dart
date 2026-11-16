@@ -218,8 +218,7 @@ class FeedOutbox {
   Future<List<String>> deliveredMessageIds(String teamId) => (db.selectOnly(db.feedUploads)
         ..addColumns([db.feedUploads.clientMessageId])
         ..where(db.feedUploads.teamId.equals(teamId) & db.feedUploads.status.isIn(FeedOutbox.delivered))
-        ..orderBy([OrderingTerm.desc(db.feedUploads.uploadedAt)])
-        ..limit(500))
+        ..orderBy([OrderingTerm.desc(db.feedUploads.uploadedAt)]))
       .map((row) => row.read(db.feedUploads.clientMessageId)!)
       .get();
 

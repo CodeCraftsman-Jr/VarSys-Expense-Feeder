@@ -1,16 +1,21 @@
 package com.varsys.moneytrail
 
 import android.Manifest
+import android.app.NotificationChannel
+import android.app.NotificationManager
 import android.content.Context
 import android.content.pm.PackageManager
+import android.content.pm.ServiceInfo
 import android.os.Build
 import android.provider.Telephony
 import android.util.Log
+import androidx.core.app.NotificationCompat
 import androidx.core.content.ContextCompat
 import androidx.work.Constraints
 import androidx.work.CoroutineWorker
 import androidx.work.ExistingPeriodicWorkPolicy
 import androidx.work.ExistingWorkPolicy
+import androidx.work.ForegroundInfo
 import androidx.work.NetworkType
 import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.PeriodicWorkRequestBuilder
@@ -43,6 +48,15 @@ class SyncWorker(context: Context, params: WorkerParameters) : CoroutineWorker(c
         val prefs = applicationContext.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
         if (!prefs.getBoolean(PREF_SMS, false) || !hasSmsPermission(applicationContext)) return Result.success()
 
+        // A foreground service keeps Android (and phone-maker freezers such as HyperOS) from
+        // freezing this process mid-sync. Android may refuse to start one from the background;
+        // the sync still runs then, with the weaker background guarantees.
+        try {
+            setForeground(foregroundInfo(applicationContext))
+        } catch (e: Exception) {
+            Log.w(TAG, "could not run in the foreground: ${e.message}")
+        }
+
         val done = CompletableDeferred<Boolean>()
         val engine = withContext(Dispatchers.Main) {
             val loader = FlutterInjector.instance().flutterLoader()
@@ -70,8 +84,38 @@ class SyncWorker(context: Context, params: WorkerParameters) : CoroutineWorker(c
         return Result.success()
     }
 
+    override suspend fun getForegroundInfo(): ForegroundInfo = foregroundInfo(applicationContext)
+
     companion object {
         private const val TAG = "moneytrail-sync"
+        private const val STATUS_CHANNEL = "sync_status"
+        private const val STATUS_ID = 4101
+
+        /** The short "Syncing" notification shown while a background sync runs. */
+        fun foregroundInfo(context: Context): ForegroundInfo {
+            val nm = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+            if (Build.VERSION.SDK_INT >= 26 && nm.getNotificationChannel(STATUS_CHANNEL) == null) {
+                nm.createNotificationChannel(
+                    NotificationChannel(STATUS_CHANNEL, "Background sync", NotificationManager.IMPORTANCE_MIN).apply {
+                        description = "Shown briefly while MoneyTrail sends new bank messages"
+                        setShowBadge(false)
+                    },
+                )
+            }
+            val notification = NotificationCompat.Builder(context, STATUS_CHANNEL)
+                .setSmallIcon(R.drawable.ic_stat_varsys)
+                .setContentTitle("MoneyTrail")
+                .setContentText("Syncing new bank messages")
+                .setPriority(NotificationCompat.PRIORITY_MIN)
+                .setOngoing(true)
+                .setSilent(true)
+                .build()
+            return if (Build.VERSION.SDK_INT >= 29) {
+                ForegroundInfo(STATUS_ID, notification, ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC)
+            } else {
+                ForegroundInfo(STATUS_ID, notification)
+            }
+        }
         private const val PERIODIC = "moneytrail-periodic-sync"
         private const val ON_SMS = "moneytrail-sms-sync"
         private const val TIMEOUT_MS = 8 * 60_000L
@@ -80,12 +124,17 @@ class SyncWorker(context: Context, params: WorkerParameters) : CoroutineWorker(c
 
         private val network = Constraints.Builder().setRequiredNetworkType(NetworkType.CONNECTED).build()
 
-        /** Keeps one 30-minute job scheduled; called on every app start. */
+        /**
+         * Keeps one 30-minute job scheduled. Called on app start, after boot or update, and on
+         * every bank SMS. UPDATE (not KEEP) matters: KEEP leaves an existing entry alone even when
+         * the phone dropped its system job (reinstall, or a maker's cleanup after the app is
+         * swiped away), while UPDATE registers the system job again without resetting the timing.
+         */
         fun schedulePeriodic(context: Context) {
             val request = PeriodicWorkRequestBuilder<SyncWorker>(30, TimeUnit.MINUTES)
                 .setConstraints(network)
                 .build()
-            WorkManager.getInstance(context).enqueueUniquePeriodicWork(PERIODIC, ExistingPeriodicWorkPolicy.KEEP, request)
+            WorkManager.getInstance(context).enqueueUniquePeriodicWork(PERIODIC, ExistingPeriodicWorkPolicy.UPDATE, request)
         }
 
         /** One run shortly after a bank SMS; more SMS meanwhile join the same run. */

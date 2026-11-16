@@ -22,7 +22,6 @@ class DashboardScreen extends ConsumerWidget {
     final month = ref.watch(selectedMonthProvider);
     final txns = ref.watch(monthTxnsProvider);
     final sync = ref.watch(smsSyncProvider);
-    final review = ref.watch(reviewCountProvider).value ?? 0;
 
     return Scaffold(
       body: SafeArea(
@@ -47,7 +46,6 @@ class DashboardScreen extends ConsumerWidget {
                           HeroCard(stats: stats, month: month),
                           const SizedBox(height: 12),
                           BudgetCard(hasSpending: stats.spent > 0),
-                          if (review > 0) ...[const SizedBox(height: 12), _ReviewBanner(count: review)],
                           if (stats.unconverted > 0) ...[
                             const SizedBox(height: 12),
                             _ForeignBanner(count: stats.unconverted),
@@ -178,31 +176,6 @@ class _SyncButtonState extends ConsumerState<_SyncButton> with SingleTickerProvi
     tooltip: 'Sync SMS',
     onPressed: widget.syncing ? null : () => ref.read(smsSyncProvider.notifier).sync(),
     icon: RotationTransition(turns: _spin, child: const Icon(PhosphorIconsBold.arrowsClockwise, size: 20)),
-  );
-}
-
-class _ReviewBanner extends StatelessWidget {
-  const _ReviewBanner({required this.count});
-  final int count;
-
-  @override
-  Widget build(BuildContext context) => AppCard(
-    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-    color: Palette.amber.withValues(alpha: context.isDark ? 0.12 : 0.16),
-    onTap: () => context.go('/activity?filter=review'),
-    child: Row(
-      children: [
-        const Icon(PhosphorIconsFill.warningCircle, color: Palette.amber),
-        const SizedBox(width: 12),
-        Expanded(
-          child: Text(
-            '$count transaction${count == 1 ? '' : 's'} need${count == 1 ? 's' : ''} a quick look',
-            style: context.text.titleSmall?.copyWith(fontWeight: FontWeight.w600),
-          ),
-        ),
-        const Icon(PhosphorIconsBold.caretRight, size: 18),
-      ],
-    ),
   );
 }
 

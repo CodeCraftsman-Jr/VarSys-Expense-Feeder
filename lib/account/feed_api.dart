@@ -193,6 +193,33 @@ class JjFeedClient {
     return [for (final r in (results as List? ?? const [])) (r as Map).cast<String, Object?>()];
   }
 
+  /// What the team decided about this phone's rows since the saved cursor (both null the first time),
+  /// oldest first. Save the last row's `decided_at` and `feed_row_id` and ask again from there.
+  Future<({List<Map<String, Object?>> decisions, bool hasMore})> decisions({
+    required String token,
+    required String deviceId,
+    String? afterAt,
+    int? afterId,
+  }) async {
+    final res = await _call(
+      () => _http.post(
+        _base.resolve('/api/feed/rows/decisions'),
+        headers: {..._auth(token), 'content-type': 'application/json', 'x-device-id': deviceId},
+        body: jsonEncode({
+          'after_at': ?afterAt,
+          'after_id': ?afterId,
+          'limit': 200,
+        }),
+      ),
+      timeout: const Duration(seconds: 45),
+    );
+    final body = _json(res);
+    return (
+      decisions: [for (final r in (body['decisions'] as List? ?? const [])) (r as Map).cast<String, Object?>()],
+      hasMore: body['has_more'] == true,
+    );
+  }
+
   Map<String, String> _auth(String token) => {'authorization': 'Bearer $token'};
 
   Future<http.Response> _call(Future<http.Response> Function() send, {Duration? timeout}) async {

@@ -35,6 +35,7 @@ class SmsAlertReceiver : BroadcastReceiver() {
         // A bank-style sender: import and send to Joint Journey shortly, whether or not alerts are on.
         if (parts.filterNotNull().any { dlt.matches((it.displayOriginatingAddress ?: it.originatingAddress ?: "").uppercase()) }) {
             SyncWorker.runSoon(context)
+            SyncWorker.schedulePeriodic(context)
         }
         if (!alertsEnabled(context)) return
         // Multipart messages arrive as several PDUs from one sender.

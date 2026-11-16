@@ -17,11 +17,23 @@ class TxnView {
   final Account? account;
 }
 
+/// One decision read back from the server for a row this phone sent.
+class FeedDecisionRow {
+  const FeedDecisionRow({required this.clientMessageId, required this.reviewState, required this.category,
+    required this.subCategory, required this.decidedAt});
+  final String clientMessageId;
+  final String reviewState;
+  final String? category;
+  final String? subCategory;
+  final DateTime decidedAt;
+}
+
 /// Metadata for a feed upload. Its large payload is fetched only when a member
 /// opens the transaction's sent-payload details.
 class FeedUploadSummary {
   const FeedUploadSummary({required this.teamId, required this.clientMessageId, required this.transactionId,
-    required this.status, required this.reason, required this.serverId, required this.appVersion, required this.uploadedAt});
+    required this.status, required this.reason, required this.serverId, required this.appVersion, required this.uploadedAt,
+    this.reviewState = 'pending', this.decidedCategory, this.decidedSubCategory, this.decidedAt});
   final String teamId;
   final String clientMessageId;
   final int? transactionId;
@@ -30,6 +42,15 @@ class FeedUploadSummary {
   final int? serverId;
   final String appVersion;
   final DateTime uploadedAt;
+
+  /// The team's decision, read back from the server: pending, confirmed, added, linked, transfer or ignored.
+  final String reviewState;
+  final String? decidedCategory;
+  final String? decidedSubCategory;
+  final DateTime? decidedAt;
+
+  /// True once the team has put it in the ledger or set it aside; nothing is left to do for it.
+  bool get decided => reviewState == 'added' || reviewState == 'linked' || reviewState == 'transfer' || reviewState == 'ignored';
 }
 
 extension TxnMoney on Transaction {
@@ -58,7 +79,7 @@ class AppDatabase extends _$AppDatabase {
   static const protectedCategories = {'Transfers', 'Other'};
 
   @override
-  int get schemaVersion => 6;
+  int get schemaVersion => 7;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -98,6 +119,13 @@ class AppDatabase extends _$AppDatabase {
       if (from < 6) {
         await m.addColumn(feedUploads, feedUploads.payloadJson);
         await customStatement('CREATE INDEX IF NOT EXISTS idx_feed_uploads_team_time ON feed_uploads (team_id, uploaded_at DESC)');
+      }
+      // v7: the team's decision for each upload, read back from Joint Journey.
+      if (from < 7) {
+        await _addColumnIfMissing(m, feedUploads, feedUploads.reviewState);
+        await _addColumnIfMissing(m, feedUploads, feedUploads.decidedCategory);
+        await _addColumnIfMissing(m, feedUploads, feedUploads.decidedSubCategory);
+        await _addColumnIfMissing(m, feedUploads, feedUploads.decidedAt);
       }
     },
     beforeOpen: (details) async {
@@ -569,7 +597,8 @@ class AppDatabase extends _$AppDatabase {
   /// Watches only upload metadata for the active Activity list. Payload JSON
   /// stays out of this query and is loaded separately for one transaction.
   Stream<List<FeedUploadSummary>> watchFeedUploadSummaries(String teamId) => customSelect(
-    'SELECT team_id, client_message_id, transaction_id, status, reason, server_id, app_version, uploaded_at '
+    'SELECT team_id, client_message_id, transaction_id, status, reason, server_id, app_version, uploaded_at, '
+    'review_state, decided_category, decided_sub_category, decided_at '
     'FROM feed_uploads WHERE team_id = ? AND transaction_id IN '
     '(SELECT id FROM transactions ORDER BY occurred_at DESC, id DESC LIMIT 2000) '
     'ORDER BY uploaded_at DESC, client_message_id DESC',
@@ -579,7 +608,8 @@ class AppDatabase extends _$AppDatabase {
 
   Future<FeedUploadSummary?> feedUploadForTransaction(String teamId, int transactionId) async {
     final row = await customSelect(
-      'SELECT team_id, client_message_id, transaction_id, status, reason, server_id, app_version, uploaded_at '
+      'SELECT team_id, client_message_id, transaction_id, status, reason, server_id, app_version, uploaded_at, '
+      'review_state, decided_category, decided_sub_category, decided_at '
       'FROM feed_uploads WHERE team_id = ? AND transaction_id = ? '
       'ORDER BY uploaded_at DESC, client_message_id DESC LIMIT 1',
       variables: [Variable.withString(teamId), Variable.withInt(transactionId)],
@@ -597,6 +627,10 @@ class AppDatabase extends _$AppDatabase {
     serverId: row.readNullable<int>('server_id'),
     appVersion: row.read<String>('app_version'),
     uploadedAt: row.read<DateTime>('uploaded_at'),
+    reviewState: row.read<String>('review_state'),
+    decidedCategory: row.readNullable<String>('decided_category'),
+    decidedSubCategory: row.readNullable<String>('decided_sub_category'),
+    decidedAt: row.readNullable<DateTime>('decided_at'),
   );
 
   Future<String?> feedUploadPayload(String teamId, String clientMessageId) async {
@@ -606,6 +640,25 @@ class AppDatabase extends _$AppDatabase {
       readsFrom: {feedUploads},
     ).getSingleOrNull();
     return row?.readNullable<String>('payload_json');
+  }
+
+  /// Saves what the team decided about rows this phone sent, and clears the phone's own "needs review"
+  /// marks on them: from now on the web decides, so nothing is left for the phone user to confirm.
+  Future<void> applyFeedDecisions(String teamId, List<FeedDecisionRow> decisions) async {
+    if (decisions.isEmpty) return;
+    await transaction(() async {
+      for (final d in decisions) {
+        await (update(feedUploads)..where((u) => u.teamId.equals(teamId) & u.clientMessageId.equals(d.clientMessageId))).write(
+          FeedUploadsCompanion(
+            reviewState: Value(d.reviewState),
+            decidedCategory: Value(d.category),
+            decidedSubCategory: Value(d.subCategory),
+            decidedAt: Value(d.decidedAt),
+          ),
+        );
+      }
+      await confirmFeedReviewRows(teamId, [for (final d in decisions) d.clientMessageId]);
+    });
   }
 
   /// Applies a review outcome from Joint Journey to the corresponding local transaction.
@@ -630,8 +683,7 @@ class AppDatabase extends _$AppDatabase {
       ..where(feedUploads.teamId.equals(teamId) &
           feedUploads.status.isIn(['accepted', 'already_received']) &
           transactions.status.equalsValue(TxnStatus.confirmed))
-      ..orderBy([OrderingTerm.desc(feedUploads.uploadedAt)])
-      ..limit(500);
+      ..orderBy([OrderingTerm.desc(feedUploads.uploadedAt)]);
     final rows = await query.get();
     return [for (final row in rows) row.readTable(feedUploads).clientMessageId];
   }

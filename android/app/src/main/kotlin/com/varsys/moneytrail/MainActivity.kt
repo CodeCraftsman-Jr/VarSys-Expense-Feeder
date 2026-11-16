@@ -10,7 +10,10 @@ import android.os.Build
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
+import android.net.Uri
+import android.os.PowerManager
 import android.os.StatFs
+import android.provider.Settings
 import android.provider.Telephony
 import android.view.WindowManager
 import io.flutter.embedding.android.FlutterFragmentActivity
@@ -48,6 +51,16 @@ class MainActivity : FlutterFragmentActivity() {
     override fun onPause() {
         visible = false
         super.onPause()
+    }
+
+    /** The Xiaomi autostart screen if this phone has one and it can be opened, else null. */
+    private fun autostartIntent(): Intent? {
+        if (!Build.MANUFACTURER.equals("xiaomi", true) && !Build.BRAND.equals("poco", true) && !Build.BRAND.equals("redmi", true)) return null
+        val intent = Intent().setClassName(
+            "com.miui.securitycenter",
+            "com.miui.permcenter.autostart.AutoStartManagementActivity",
+        )
+        return if (packageManager.resolveActivity(intent, 0) != null) intent else null
     }
 
     private fun setSecure(secure: Boolean) {
@@ -128,6 +141,35 @@ class MainActivity : FlutterFragmentActivity() {
                 "isCharging" -> {
                     val bm = getSystemService(BATTERY_SERVICE) as BatteryManager
                     result.success(bm.isCharging)
+                }
+                // True when Android lets the app run in the background without battery limits.
+                "batteryUnrestricted" -> {
+                    val pm = getSystemService(POWER_SERVICE) as PowerManager
+                    result.success(pm.isIgnoringBatteryOptimizations(packageName))
+                }
+                // Xiaomi, Redmi and POCO keep their own "Autostart" list; without it they block
+                // background starts. There is no way to read the switch, only to open its page.
+                "autostartPage" -> result.success(autostartIntent() != null)
+                "openAutostart" -> {
+                    val intent = autostartIntent()
+                    if (intent == null) {
+                        result.success(false)
+                    } else {
+                        startActivity(intent)
+                        result.success(true)
+                    }
+                }
+                // Opens the system "allow unrestricted battery use" prompt for this app.
+                "requestBatteryUnrestricted" -> {
+                    try {
+                        startActivity(
+                            Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS)
+                                .setData(Uri.parse("package:$packageName")),
+                        )
+                    } catch (e: Exception) {
+                        startActivity(Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS))
+                    }
+                    result.success(null)
                 }
                 // Android 13+: lets the model download show its progress notification.
                 "requestNotifications" -> {

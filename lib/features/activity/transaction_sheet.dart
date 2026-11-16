@@ -12,7 +12,6 @@ import '../../core/theme/icons.dart';
 import '../../core/format.dart';
 import '../../core/theme/palette.dart';
 import '../../data/db/database.dart';
-import '../../feed/feed_sync.dart';
 import '../../providers.dart';
 import '../../ui/widgets.dart';
 import 'feed_upload_status.dart';
@@ -153,30 +152,6 @@ class TransactionSheet extends ConsumerWidget {
               label: Text('Change the ${Currencies.home} amount'),
             ),
           ),
-        if (t.duplicateOfId != null) ...[
-          const SizedBox(height: 18),
-          _DuplicatePanel(id: id, otherId: t.duplicateOfId!),
-        ] else if (t.status == TxnStatus.needsReview) ...[
-          const SizedBox(height: 18),
-          AppCard(
-            color: Palette.amber.withValues(alpha: 0.12),
-            padding: const EdgeInsets.all(14),
-            child: Row(
-              children: [
-                const Icon(PhosphorIconsFill.warningCircle, color: Palette.amber),
-                const SizedBox(width: 12),
-                const Expanded(child: Text('Parsed with low confidence. Does this look right?')),
-                TextButton(
-                  onPressed: () async {
-                    await db.confirm(id);
-                    if (context.mounted) unawaited(ref.read(feedSyncProvider.notifier).run());
-                  },
-                  child: const Text('Looks right'),
-                ),
-              ],
-            ),
-          ),
-        ],
         const SizedBox(height: 16),
         const SectionHeader('Category'),
         CategoryPicker(
@@ -422,66 +397,6 @@ class _SentPayloadExpansionState extends ConsumerState<_SentPayloadExpansion> {
   }
 }
 
-class _DuplicatePanel extends ConsumerWidget {
-  const _DuplicatePanel({required this.id, required this.otherId});
-  final int id;
-  final int otherId;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final other = ref.watch(txnProvider(otherId)).value;
-    final db = ref.read(databaseProvider);
-    return AppCard(
-      color: Palette.amber.withValues(alpha: 0.12),
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              const Icon(PhosphorIconsFill.copy, color: Palette.amber, size: 20),
-              const SizedBox(width: 10),
-              Text('Possible duplicate', style: context.text.titleSmall?.copyWith(fontWeight: FontWeight.w700)),
-            ],
-          ),
-          const SizedBox(height: 8),
-          if (other == null)
-            const Text('The matching transaction no longer exists.')
-          else
-            TransactionTile(view: other, showDate: true),
-          const SizedBox(height: 8),
-          Row(
-            children: [
-              Expanded(
-                child: OutlinedButton(
-                  onPressed: () async {
-                    await db.confirm(id);
-                    unawaited(ref.read(feedSyncProvider.notifier).run());
-                  },
-                  child: const Text('Keep both'),
-                ),
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: FilledButton(
-                  style: FilledButton.styleFrom(minimumSize: const Size.fromHeight(44)),
-                  onPressed: other == null
-                      ? null
-                      : () async {
-                          Navigator.pop(context);
-                          await db.mergeInto(id, otherId);
-                          unawaited(ref.read(feedSyncProvider.notifier).run());
-                        },
-                  child: const Text('Merge'),
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-}
 
 class _SourceCard extends StatelessWidget {
   const _SourceCard({required this.message});

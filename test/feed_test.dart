@@ -196,7 +196,10 @@ void main() {
     late bool feedOn;
     late int rowsStatus;
     late bool down;
-    final reviewStates = <String, String>{};
+    // An older server has no decisions endpoint yet (404): uploads must carry on.
+    var decisionsMissing = false;
+    // What the team decided, as the server returns it: one map per row, in decided_at order.
+    final teamDecisions = <Map<String, Object?>>[];
 
     http.Client server() => MockClient((req) async {
       if (down && req.url.host != 'auth.varsys.co.in') throw http.ClientException('network down');
@@ -228,14 +231,19 @@ void main() {
             }),
             200,
           );
-        case '/api/feed/rows/review-state':
+        case '/api/feed/rows/decisions':
+          if (decisionsMissing) return http.Response('', 404);
           final body = jsonDecode(req.body) as Map;
-          return http.Response(jsonEncode({
-            'results': [
-              for (final id in body['client_message_ids'] as List)
-                {'client_message_id': id, 'review_state': reviewStates[id] ?? 'pending', 'reviewed_at': null},
-            ],
-          }), 200);
+          final afterId = body['after_id'] as int?;
+          final afterAt = body['after_at'] as String?;
+          final fresh = [
+            for (final d in teamDecisions)
+              if (afterAt == null ||
+                  DateTime.parse(d['decided_at'] as String).isAfter(DateTime.parse(afterAt)) ||
+                  (d['decided_at'] == afterAt && (d['feed_row_id'] as int) > (afterId ?? 0)))
+                d,
+          ];
+          return http.Response(jsonEncode({'decisions': fresh, 'has_more': false}), 200);
       }
       return http.Response('', 404);
     });
@@ -270,7 +278,8 @@ void main() {
       feedOn = false;
       rowsStatus = 200;
       down = false;
-      reviewStates.clear();
+      teamDecisions.clear();
+      decisionsMissing = false;
     });
     tearDown(() => db.close());
 
@@ -305,7 +314,7 @@ void main() {
       expect(c.read(feedSyncProvider).pending, 0);
     });
 
-    test('pulls web review decisions into the matching local transaction', () async {
+    test('saves what the team decided and clears the phone review flag', () async {
       feedOn = true;
       final c = await signedIn();
       final upload = (await db.select(db.feedUploads).get()).singleWhere((u) => u.transactionId != null);
@@ -313,18 +322,63 @@ void main() {
       await (db.update(db.transactions)..where((t) => t.id.equals(txnId))).write(
         const TransactionsCompanion(status: Value(TxnStatus.needsReview)),
       );
-      reviewStates[upload.clientMessageId] = 'confirmed';
+      teamDecisions.add({
+        'feed_row_id': 7,
+        'client_message_id': upload.clientMessageId,
+        'review_state': 'added',
+        'status': 'new',
+        'category': 'Food',
+        'sub_category': 'Groceries',
+        'record_kind': 'expense',
+        'record_id': 99,
+        'decided_at': '2026-11-16T10:00:00.000Z',
+      });
 
       await c.read(feedSyncProvider.notifier).run();
 
+      final saved = await (db.select(db.feedUploads)..where((u) => u.clientMessageId.equals(upload.clientMessageId))).getSingle();
+      expect(saved.reviewState, 'added');
+      expect(saved.decidedCategory, 'Food');
+      expect(saved.decidedSubCategory, 'Groceries');
       final transaction = await (db.select(db.transactions)..where((t) => t.id.equals(txnId))).getSingle();
-      expect(transaction.status, TxnStatus.confirmed);
-      final request = requests.lastWhere((r) => r.url.path == '/api/feed/rows/review-state');
+      expect(transaction.status, TxnStatus.confirmed, reason: 'nothing is left for the phone user to confirm');
+      final request = requests.lastWhere((r) => r.url.path == '/api/feed/rows/decisions');
       expect(request.headers['x-device-id'], secrets.values[AccountKeys.deviceId]);
-      expect((jsonDecode(request.body) as Map)['client_message_ids'], contains(upload.clientMessageId));
     });
 
-    test('sends phone-confirmed ids back to the server', () async {
+    test('asks again only from where the last pull stopped', () async {
+      feedOn = true;
+      final c = await signedIn();
+      final upload = (await db.select(db.feedUploads).get()).firstWhere((u) => u.transactionId != null);
+      teamDecisions.add({
+        'feed_row_id': 7,
+        'client_message_id': upload.clientMessageId,
+        'review_state': 'transfer',
+        'status': 'new',
+        'category': null,
+        'sub_category': null,
+        'record_kind': null,
+        'record_id': null,
+        'decided_at': '2026-11-16T10:00:00.000Z',
+      });
+      await c.read(feedSyncProvider.notifier).run();
+      await c.read(feedSyncProvider.notifier).run();
+
+      final last = requests.lastWhere((r) => r.url.path == '/api/feed/rows/decisions');
+      final body = jsonDecode(last.body) as Map;
+      expect(body['after_at'], '2026-11-16T10:00:00.000Z');
+      expect(body['after_id'], 7);
+    });
+
+    test('an older server without decisions does not stop the upload', () async {
+      feedOn = true;
+      decisionsMissing = true;
+      final c = await signedIn();
+      expect(requests.where((r) => r.url.path == '/api/feed/rows'), isNotEmpty, reason: 'rows still go out');
+      expect(c.read(feedSyncProvider).sent, 1);
+    });
+
+    test('the phone never sends review decisions of its own', () async {
       feedOn = true;
       final c = await signedIn();
       final upload = (await db.select(db.feedUploads).get()).firstWhere((u) => u.transactionId != null);
@@ -332,8 +386,7 @@ void main() {
 
       await c.read(feedSyncProvider.notifier).run();
 
-      final request = requests.lastWhere((r) => r.url.path == '/api/feed/rows/review-state');
-      expect((jsonDecode(request.body) as Map)['confirmed_client_message_ids'], contains(upload.clientMessageId));
+      expect(requests.where((r) => r.url.path == '/api/feed/rows/review-state'), isEmpty);
     });
 
     test('a removed phone keeps its rows waiting and says why', () async {
@@ -398,8 +451,8 @@ void main() {
             }),
             200,
           );
-        case '/api/feed/rows/review-state':
-          return http.Response('{"results":[]}', 200);
+        case '/api/feed/rows/decisions':
+          return http.Response('{"decisions":[],"has_more":false}', 200);
         case '/api/feed/rows/withdraw':
           final ids = (jsonDecode(req.body) as Map)['client_message_ids'] as List;
           return http.Response(

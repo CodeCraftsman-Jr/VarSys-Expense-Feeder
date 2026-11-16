@@ -3529,6 +3529,51 @@ class $FeedUploadsTable extends FeedUploads
     type: DriftSqlType.string,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _reviewStateMeta = const VerificationMeta(
+    'reviewState',
+  );
+  @override
+  late final GeneratedColumn<String> reviewState = GeneratedColumn<String>(
+    'review_state',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant('pending'),
+  );
+  static const VerificationMeta _decidedCategoryMeta = const VerificationMeta(
+    'decidedCategory',
+  );
+  @override
+  late final GeneratedColumn<String> decidedCategory = GeneratedColumn<String>(
+    'decided_category',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _decidedSubCategoryMeta =
+      const VerificationMeta('decidedSubCategory');
+  @override
+  late final GeneratedColumn<String> decidedSubCategory =
+      GeneratedColumn<String>(
+        'decided_sub_category',
+        aliasedName,
+        true,
+        type: DriftSqlType.string,
+        requiredDuringInsert: false,
+      );
+  static const VerificationMeta _decidedAtMeta = const VerificationMeta(
+    'decidedAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> decidedAt = GeneratedColumn<DateTime>(
+    'decided_at',
+    aliasedName,
+    true,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: false,
+  );
   @override
   List<GeneratedColumn> get $columns => [
     teamId,
@@ -3540,6 +3585,10 @@ class $FeedUploadsTable extends FeedUploads
     appVersion,
     uploadedAt,
     payloadJson,
+    reviewState,
+    decidedCategory,
+    decidedSubCategory,
+    decidedAt,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -3626,6 +3675,39 @@ class $FeedUploadsTable extends FeedUploads
         ),
       );
     }
+    if (data.containsKey('review_state')) {
+      context.handle(
+        _reviewStateMeta,
+        reviewState.isAcceptableOrUnknown(
+          data['review_state']!,
+          _reviewStateMeta,
+        ),
+      );
+    }
+    if (data.containsKey('decided_category')) {
+      context.handle(
+        _decidedCategoryMeta,
+        decidedCategory.isAcceptableOrUnknown(
+          data['decided_category']!,
+          _decidedCategoryMeta,
+        ),
+      );
+    }
+    if (data.containsKey('decided_sub_category')) {
+      context.handle(
+        _decidedSubCategoryMeta,
+        decidedSubCategory.isAcceptableOrUnknown(
+          data['decided_sub_category']!,
+          _decidedSubCategoryMeta,
+        ),
+      );
+    }
+    if (data.containsKey('decided_at')) {
+      context.handle(
+        _decidedAtMeta,
+        decidedAt.isAcceptableOrUnknown(data['decided_at']!, _decidedAtMeta),
+      );
+    }
     return context;
   }
 
@@ -3671,6 +3753,22 @@ class $FeedUploadsTable extends FeedUploads
         DriftSqlType.string,
         data['${effectivePrefix}payload_json'],
       ),
+      reviewState: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}review_state'],
+      )!,
+      decidedCategory: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}decided_category'],
+      ),
+      decidedSubCategory: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}decided_sub_category'],
+      ),
+      decidedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}decided_at'],
+      ),
     );
   }
 
@@ -3699,9 +3797,16 @@ class FeedUpload extends DataClass implements Insertable<FeedUpload> {
   final String appVersion;
   final DateTime uploadedAt;
 
-  /// Exact row object included in the request. Stored in the encrypted local
-  /// database so the member can inspect the historic send, not a reconstruction.
+  /// Exact row object included in the request, stored in encrypted local DB.
   final String? payloadJson;
+
+  /// What the team decided on the web, read back from the server (v7). The phone never decides:
+  /// pending (waiting), confirmed (reviewed, still waiting), added or linked (in the ledger),
+  /// transfer or ignored (kept out of it).
+  final String reviewState;
+  final String? decidedCategory;
+  final String? decidedSubCategory;
+  final DateTime? decidedAt;
   const FeedUpload({
     required this.teamId,
     required this.clientMessageId,
@@ -3712,6 +3817,10 @@ class FeedUpload extends DataClass implements Insertable<FeedUpload> {
     required this.appVersion,
     required this.uploadedAt,
     this.payloadJson,
+    required this.reviewState,
+    this.decidedCategory,
+    this.decidedSubCategory,
+    this.decidedAt,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -3732,6 +3841,16 @@ class FeedUpload extends DataClass implements Insertable<FeedUpload> {
     map['uploaded_at'] = Variable<DateTime>(uploadedAt);
     if (!nullToAbsent || payloadJson != null) {
       map['payload_json'] = Variable<String>(payloadJson);
+    }
+    map['review_state'] = Variable<String>(reviewState);
+    if (!nullToAbsent || decidedCategory != null) {
+      map['decided_category'] = Variable<String>(decidedCategory);
+    }
+    if (!nullToAbsent || decidedSubCategory != null) {
+      map['decided_sub_category'] = Variable<String>(decidedSubCategory);
+    }
+    if (!nullToAbsent || decidedAt != null) {
+      map['decided_at'] = Variable<DateTime>(decidedAt);
     }
     return map;
   }
@@ -3755,6 +3874,16 @@ class FeedUpload extends DataClass implements Insertable<FeedUpload> {
       payloadJson: payloadJson == null && nullToAbsent
           ? const Value.absent()
           : Value(payloadJson),
+      reviewState: Value(reviewState),
+      decidedCategory: decidedCategory == null && nullToAbsent
+          ? const Value.absent()
+          : Value(decidedCategory),
+      decidedSubCategory: decidedSubCategory == null && nullToAbsent
+          ? const Value.absent()
+          : Value(decidedSubCategory),
+      decidedAt: decidedAt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(decidedAt),
     );
   }
 
@@ -3773,6 +3902,12 @@ class FeedUpload extends DataClass implements Insertable<FeedUpload> {
       appVersion: serializer.fromJson<String>(json['appVersion']),
       uploadedAt: serializer.fromJson<DateTime>(json['uploadedAt']),
       payloadJson: serializer.fromJson<String?>(json['payloadJson']),
+      reviewState: serializer.fromJson<String>(json['reviewState']),
+      decidedCategory: serializer.fromJson<String?>(json['decidedCategory']),
+      decidedSubCategory: serializer.fromJson<String?>(
+        json['decidedSubCategory'],
+      ),
+      decidedAt: serializer.fromJson<DateTime?>(json['decidedAt']),
     );
   }
   @override
@@ -3788,6 +3923,10 @@ class FeedUpload extends DataClass implements Insertable<FeedUpload> {
       'appVersion': serializer.toJson<String>(appVersion),
       'uploadedAt': serializer.toJson<DateTime>(uploadedAt),
       'payloadJson': serializer.toJson<String?>(payloadJson),
+      'reviewState': serializer.toJson<String>(reviewState),
+      'decidedCategory': serializer.toJson<String?>(decidedCategory),
+      'decidedSubCategory': serializer.toJson<String?>(decidedSubCategory),
+      'decidedAt': serializer.toJson<DateTime?>(decidedAt),
     };
   }
 
@@ -3801,6 +3940,10 @@ class FeedUpload extends DataClass implements Insertable<FeedUpload> {
     String? appVersion,
     DateTime? uploadedAt,
     Value<String?> payloadJson = const Value.absent(),
+    String? reviewState,
+    Value<String?> decidedCategory = const Value.absent(),
+    Value<String?> decidedSubCategory = const Value.absent(),
+    Value<DateTime?> decidedAt = const Value.absent(),
   }) => FeedUpload(
     teamId: teamId ?? this.teamId,
     clientMessageId: clientMessageId ?? this.clientMessageId,
@@ -3813,6 +3956,14 @@ class FeedUpload extends DataClass implements Insertable<FeedUpload> {
     appVersion: appVersion ?? this.appVersion,
     uploadedAt: uploadedAt ?? this.uploadedAt,
     payloadJson: payloadJson.present ? payloadJson.value : this.payloadJson,
+    reviewState: reviewState ?? this.reviewState,
+    decidedCategory: decidedCategory.present
+        ? decidedCategory.value
+        : this.decidedCategory,
+    decidedSubCategory: decidedSubCategory.present
+        ? decidedSubCategory.value
+        : this.decidedSubCategory,
+    decidedAt: decidedAt.present ? decidedAt.value : this.decidedAt,
   );
   FeedUpload copyWithCompanion(FeedUploadsCompanion data) {
     return FeedUpload(
@@ -3835,6 +3986,16 @@ class FeedUpload extends DataClass implements Insertable<FeedUpload> {
       payloadJson: data.payloadJson.present
           ? data.payloadJson.value
           : this.payloadJson,
+      reviewState: data.reviewState.present
+          ? data.reviewState.value
+          : this.reviewState,
+      decidedCategory: data.decidedCategory.present
+          ? data.decidedCategory.value
+          : this.decidedCategory,
+      decidedSubCategory: data.decidedSubCategory.present
+          ? data.decidedSubCategory.value
+          : this.decidedSubCategory,
+      decidedAt: data.decidedAt.present ? data.decidedAt.value : this.decidedAt,
     );
   }
 
@@ -3849,7 +4010,11 @@ class FeedUpload extends DataClass implements Insertable<FeedUpload> {
           ..write('serverId: $serverId, ')
           ..write('appVersion: $appVersion, ')
           ..write('uploadedAt: $uploadedAt, ')
-          ..write('payloadJson: $payloadJson')
+          ..write('payloadJson: $payloadJson, ')
+          ..write('reviewState: $reviewState, ')
+          ..write('decidedCategory: $decidedCategory, ')
+          ..write('decidedSubCategory: $decidedSubCategory, ')
+          ..write('decidedAt: $decidedAt')
           ..write(')'))
         .toString();
   }
@@ -3865,6 +4030,10 @@ class FeedUpload extends DataClass implements Insertable<FeedUpload> {
     appVersion,
     uploadedAt,
     payloadJson,
+    reviewState,
+    decidedCategory,
+    decidedSubCategory,
+    decidedAt,
   );
   @override
   bool operator ==(Object other) =>
@@ -3878,7 +4047,11 @@ class FeedUpload extends DataClass implements Insertable<FeedUpload> {
           other.serverId == this.serverId &&
           other.appVersion == this.appVersion &&
           other.uploadedAt == this.uploadedAt &&
-          other.payloadJson == this.payloadJson);
+          other.payloadJson == this.payloadJson &&
+          other.reviewState == this.reviewState &&
+          other.decidedCategory == this.decidedCategory &&
+          other.decidedSubCategory == this.decidedSubCategory &&
+          other.decidedAt == this.decidedAt);
 }
 
 class FeedUploadsCompanion extends UpdateCompanion<FeedUpload> {
@@ -3891,6 +4064,10 @@ class FeedUploadsCompanion extends UpdateCompanion<FeedUpload> {
   final Value<String> appVersion;
   final Value<DateTime> uploadedAt;
   final Value<String?> payloadJson;
+  final Value<String> reviewState;
+  final Value<String?> decidedCategory;
+  final Value<String?> decidedSubCategory;
+  final Value<DateTime?> decidedAt;
   final Value<int> rowid;
   const FeedUploadsCompanion({
     this.teamId = const Value.absent(),
@@ -3902,6 +4079,10 @@ class FeedUploadsCompanion extends UpdateCompanion<FeedUpload> {
     this.appVersion = const Value.absent(),
     this.uploadedAt = const Value.absent(),
     this.payloadJson = const Value.absent(),
+    this.reviewState = const Value.absent(),
+    this.decidedCategory = const Value.absent(),
+    this.decidedSubCategory = const Value.absent(),
+    this.decidedAt = const Value.absent(),
     this.rowid = const Value.absent(),
   });
   FeedUploadsCompanion.insert({
@@ -3914,6 +4095,10 @@ class FeedUploadsCompanion extends UpdateCompanion<FeedUpload> {
     required String appVersion,
     required DateTime uploadedAt,
     this.payloadJson = const Value.absent(),
+    this.reviewState = const Value.absent(),
+    this.decidedCategory = const Value.absent(),
+    this.decidedSubCategory = const Value.absent(),
+    this.decidedAt = const Value.absent(),
     this.rowid = const Value.absent(),
   }) : teamId = Value(teamId),
        clientMessageId = Value(clientMessageId),
@@ -3930,6 +4115,10 @@ class FeedUploadsCompanion extends UpdateCompanion<FeedUpload> {
     Expression<String>? appVersion,
     Expression<DateTime>? uploadedAt,
     Expression<String>? payloadJson,
+    Expression<String>? reviewState,
+    Expression<String>? decidedCategory,
+    Expression<String>? decidedSubCategory,
+    Expression<DateTime>? decidedAt,
     Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
@@ -3942,6 +4131,11 @@ class FeedUploadsCompanion extends UpdateCompanion<FeedUpload> {
       if (appVersion != null) 'app_version': appVersion,
       if (uploadedAt != null) 'uploaded_at': uploadedAt,
       if (payloadJson != null) 'payload_json': payloadJson,
+      if (reviewState != null) 'review_state': reviewState,
+      if (decidedCategory != null) 'decided_category': decidedCategory,
+      if (decidedSubCategory != null)
+        'decided_sub_category': decidedSubCategory,
+      if (decidedAt != null) 'decided_at': decidedAt,
       if (rowid != null) 'rowid': rowid,
     });
   }
@@ -3956,6 +4150,10 @@ class FeedUploadsCompanion extends UpdateCompanion<FeedUpload> {
     Value<String>? appVersion,
     Value<DateTime>? uploadedAt,
     Value<String?>? payloadJson,
+    Value<String>? reviewState,
+    Value<String?>? decidedCategory,
+    Value<String?>? decidedSubCategory,
+    Value<DateTime?>? decidedAt,
     Value<int>? rowid,
   }) {
     return FeedUploadsCompanion(
@@ -3968,6 +4166,10 @@ class FeedUploadsCompanion extends UpdateCompanion<FeedUpload> {
       appVersion: appVersion ?? this.appVersion,
       uploadedAt: uploadedAt ?? this.uploadedAt,
       payloadJson: payloadJson ?? this.payloadJson,
+      reviewState: reviewState ?? this.reviewState,
+      decidedCategory: decidedCategory ?? this.decidedCategory,
+      decidedSubCategory: decidedSubCategory ?? this.decidedSubCategory,
+      decidedAt: decidedAt ?? this.decidedAt,
       rowid: rowid ?? this.rowid,
     );
   }
@@ -4002,6 +4204,18 @@ class FeedUploadsCompanion extends UpdateCompanion<FeedUpload> {
     if (payloadJson.present) {
       map['payload_json'] = Variable<String>(payloadJson.value);
     }
+    if (reviewState.present) {
+      map['review_state'] = Variable<String>(reviewState.value);
+    }
+    if (decidedCategory.present) {
+      map['decided_category'] = Variable<String>(decidedCategory.value);
+    }
+    if (decidedSubCategory.present) {
+      map['decided_sub_category'] = Variable<String>(decidedSubCategory.value);
+    }
+    if (decidedAt.present) {
+      map['decided_at'] = Variable<DateTime>(decidedAt.value);
+    }
     if (rowid.present) {
       map['rowid'] = Variable<int>(rowid.value);
     }
@@ -4020,6 +4234,10 @@ class FeedUploadsCompanion extends UpdateCompanion<FeedUpload> {
           ..write('appVersion: $appVersion, ')
           ..write('uploadedAt: $uploadedAt, ')
           ..write('payloadJson: $payloadJson, ')
+          ..write('reviewState: $reviewState, ')
+          ..write('decidedCategory: $decidedCategory, ')
+          ..write('decidedSubCategory: $decidedSubCategory, ')
+          ..write('decidedAt: $decidedAt, ')
           ..write('rowid: $rowid')
           ..write(')'))
         .toString();
@@ -6792,6 +7010,10 @@ typedef $$FeedUploadsTableCreateCompanionBuilder =
       required String appVersion,
       required DateTime uploadedAt,
       Value<String?> payloadJson,
+      Value<String> reviewState,
+      Value<String?> decidedCategory,
+      Value<String?> decidedSubCategory,
+      Value<DateTime?> decidedAt,
       Value<int> rowid,
     });
 typedef $$FeedUploadsTableUpdateCompanionBuilder =
@@ -6805,6 +7027,10 @@ typedef $$FeedUploadsTableUpdateCompanionBuilder =
       Value<String> appVersion,
       Value<DateTime> uploadedAt,
       Value<String?> payloadJson,
+      Value<String> reviewState,
+      Value<String?> decidedCategory,
+      Value<String?> decidedSubCategory,
+      Value<DateTime?> decidedAt,
       Value<int> rowid,
     });
 
@@ -6859,6 +7085,26 @@ class $$FeedUploadsTableFilterComposer
 
   ColumnFilters<String> get payloadJson => $composableBuilder(
     column: $table.payloadJson,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get reviewState => $composableBuilder(
+    column: $table.reviewState,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get decidedCategory => $composableBuilder(
+    column: $table.decidedCategory,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get decidedSubCategory => $composableBuilder(
+    column: $table.decidedSubCategory,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get decidedAt => $composableBuilder(
+    column: $table.decidedAt,
     builder: (column) => ColumnFilters(column),
   );
 }
@@ -6916,6 +7162,26 @@ class $$FeedUploadsTableOrderingComposer
     column: $table.payloadJson,
     builder: (column) => ColumnOrderings(column),
   );
+
+  ColumnOrderings<String> get reviewState => $composableBuilder(
+    column: $table.reviewState,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get decidedCategory => $composableBuilder(
+    column: $table.decidedCategory,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get decidedSubCategory => $composableBuilder(
+    column: $table.decidedSubCategory,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get decidedAt => $composableBuilder(
+    column: $table.decidedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
 }
 
 class $$FeedUploadsTableAnnotationComposer
@@ -6963,6 +7229,24 @@ class $$FeedUploadsTableAnnotationComposer
     column: $table.payloadJson,
     builder: (column) => column,
   );
+
+  GeneratedColumn<String> get reviewState => $composableBuilder(
+    column: $table.reviewState,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get decidedCategory => $composableBuilder(
+    column: $table.decidedCategory,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get decidedSubCategory => $composableBuilder(
+    column: $table.decidedSubCategory,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<DateTime> get decidedAt =>
+      $composableBuilder(column: $table.decidedAt, builder: (column) => column);
 }
 
 class $$FeedUploadsTableTableManager
@@ -7005,6 +7289,10 @@ class $$FeedUploadsTableTableManager
                 Value<String> appVersion = const Value.absent(),
                 Value<DateTime> uploadedAt = const Value.absent(),
                 Value<String?> payloadJson = const Value.absent(),
+                Value<String> reviewState = const Value.absent(),
+                Value<String?> decidedCategory = const Value.absent(),
+                Value<String?> decidedSubCategory = const Value.absent(),
+                Value<DateTime?> decidedAt = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => FeedUploadsCompanion(
                 teamId: teamId,
@@ -7016,6 +7304,10 @@ class $$FeedUploadsTableTableManager
                 appVersion: appVersion,
                 uploadedAt: uploadedAt,
                 payloadJson: payloadJson,
+                reviewState: reviewState,
+                decidedCategory: decidedCategory,
+                decidedSubCategory: decidedSubCategory,
+                decidedAt: decidedAt,
                 rowid: rowid,
               ),
           createCompanionCallback:
@@ -7029,6 +7321,10 @@ class $$FeedUploadsTableTableManager
                 required String appVersion,
                 required DateTime uploadedAt,
                 Value<String?> payloadJson = const Value.absent(),
+                Value<String> reviewState = const Value.absent(),
+                Value<String?> decidedCategory = const Value.absent(),
+                Value<String?> decidedSubCategory = const Value.absent(),
+                Value<DateTime?> decidedAt = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => FeedUploadsCompanion.insert(
                 teamId: teamId,
@@ -7040,6 +7336,10 @@ class $$FeedUploadsTableTableManager
                 appVersion: appVersion,
                 uploadedAt: uploadedAt,
                 payloadJson: payloadJson,
+                reviewState: reviewState,
+                decidedCategory: decidedCategory,
+                decidedSubCategory: decidedSubCategory,
+                decidedAt: decidedAt,
                 rowid: rowid,
               ),
           withReferenceMapper: (p0) => p0

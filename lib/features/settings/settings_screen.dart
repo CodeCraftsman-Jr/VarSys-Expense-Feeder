@@ -16,6 +16,7 @@ import 'data_section.dart';
 import '../budgets/budget_providers.dart';
 import 'email_source_card.dart';
 import 'llm_status_card.dart';
+import 'background_sync_tile.dart';
 import 'sms_alerts_tile.dart';
 import 'security_card.dart';
 
@@ -257,6 +258,7 @@ class _SmsCard extends ConsumerWidget {
             ),
           ],
           if (supported && sync.enabled) const SmsAlertsTile(),
+          if (supported && sync.enabled) const BackgroundSyncTile(),
           const SizedBox(height: 14),
           if (supported)
             Row(

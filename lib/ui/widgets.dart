@@ -124,10 +124,6 @@ class TransactionTile extends StatelessWidget {
                           style: context.text.titleMedium,
                         ),
                       ),
-                      if (t.status == TxnStatus.needsReview) ...[
-                        const SizedBox(width: 6),
-                        const Icon(PhosphorIconsFill.warningCircle, size: 15, color: Palette.amber),
-                      ],
                     ],
                   ),
                   const SizedBox(height: 2),

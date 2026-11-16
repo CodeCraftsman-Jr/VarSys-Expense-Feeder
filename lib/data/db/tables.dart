@@ -163,6 +163,14 @@ class FeedUploads extends Table {
   /// Exact row object included in the request, stored in encrypted local DB.
   TextColumn get payloadJson => text().nullable()();
 
+  /// What the team decided on the web, read back from the server (v7). The phone never decides:
+  /// pending (waiting), confirmed (reviewed, still waiting), added or linked (in the ledger),
+  /// transfer or ignored (kept out of it).
+  TextColumn get reviewState => text().withDefault(const Constant('pending'))();
+  TextColumn get decidedCategory => text().nullable()();
+  TextColumn get decidedSubCategory => text().nullable()();
+  DateTimeColumn get decidedAt => dateTime().nullable()();
+
   @override
   Set<Column> get primaryKey => {teamId, clientMessageId};
 }

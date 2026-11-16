@@ -39,7 +39,7 @@ class _ActivityScreenState extends ConsumerState<ActivityScreen> {
       ActivityFilter.all => true,
       ActivityFilter.spent => t.direction == TxnDirection.debit && !t.isTransfer,
       ActivityFilter.received => t.direction == TxnDirection.credit && !t.isTransfer,
-      ActivityFilter.review => t.status == TxnStatus.needsReview,
+      ActivityFilter.review => true,
       ActivityFilter.transfers => t.isTransfer,
       ActivityFilter.foreign => t.isForeign,
     };
@@ -90,7 +90,7 @@ class _ActivityScreenState extends ConsumerState<ActivityScreen> {
                 padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
                 children: [
                   for (final f in ActivityFilter.values)
-                    if (f != ActivityFilter.foreign || anyForeign)
+                    if (f != ActivityFilter.review && (f != ActivityFilter.foreign || anyForeign))
                       Padding(
                         padding: const EdgeInsets.only(right: 8),
                         child: ChoiceChip(
@@ -119,13 +119,9 @@ class _ActivityScreenState extends ConsumerState<ActivityScreen> {
                     return ListView(
                       children: [
                         EmptyState(
-                          icon: _filter == ActivityFilter.review
-                              ? PhosphorIconsFill.checkCircle
-                              : PhosphorIconsFill.receipt,
-                          title: _filter == ActivityFilter.review ? 'All clear' : 'No transactions',
-                          message: _filter == ActivityFilter.review
-                              ? 'Nothing needs your attention right now.'
-                              : 'Try a different filter or search.',
+                          icon: PhosphorIconsFill.receipt,
+                          title: 'No transactions',
+                          message: 'Try a different filter or search.',
                         ),
                       ],
                     );
