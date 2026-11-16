@@ -1,17 +1,13 @@
-import 'dart:io';
 
-import 'package:background_downloader/background_downloader.dart' show FileDownloader;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter_edge_ai/flutter_edge_ai.dart';
-import 'package:flutter_edge_ai_litertlm/flutter_edge_ai_litertlm.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'app.dart';
 import 'background/background_sync.dart';
 import 'ingestion/share/share_intake.dart';
-import 'llm/on_device/on_device_client.dart';
+import 'core/secrets.dart';
 import 'providers.dart';
 
 Future<void> main() async {
@@ -20,25 +16,27 @@ Future<void> main() async {
   IncomingShares.instance.start();
   SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
   final prefs = await SharedPreferences.getInstance();
-  await _initOnDeviceAi();
+  await _forgetAiSettings(prefs);
   runApp(ProviderScope(overrides: [prefsProvider.overrideWithValue(prefs)], child: const MoneyTrailApp()));
 }
 
-/// Registers the LiteRT-LM engine for on-device Gemma. A failure only
-/// disables on-device AI; it must never stop the app from starting.
-Future<void> _initOnDeviceAi() async {
-  if (!Platform.isAndroid && !Platform.isIOS) return;
+/// The phone no longer has any AI features. Once, wipe the provider keys and settings an earlier
+/// version saved, so nothing sensitive stays behind where no screen can reach it.
+Future<void> _forgetAiSettings(SharedPreferences prefs) async {
+  const done = 'ai.settings.forgotten';
+  if (prefs.getBool(done) ?? false) return;
   try {
-    await FlutterEdgeAi.initialize(inferenceEngines: [const LiteRtLmEngine()]);
-    // Keeps a loaded model warm between questions; frees it when idle or on
-    // memory pressure.
-    OnDeviceClient.runtime.attach();
-    // Model downloads start only from Settings, so a download WorkManager
-    // revived after the app was killed is an orphan: stop it before it
-    // quietly continues (possibly on mobile data).
-    await FileDownloader().cancelAll(group: 'smart_downloads');
+    const providers = ['openai', 'anthropic', 'gemini', 'openrouter', 'groq', 'deepseek', 'ollama', 'lmstudio', 'custom', 'ondevice'];
+    final secrets = SecretStore();
+    for (final id in providers) {
+      await secrets.delete('llm.apiKey.$id');
+    }
+    for (final key in prefs.getKeys().where((k) => k.startsWith('llm.')).toList()) {
+      await prefs.remove(key);
+    }
+    await prefs.setBool(done, true);
   } catch (e) {
-    debugPrint('On-device AI unavailable: $e');
+    debugPrint('Could not clear old AI settings: $e');
   }
 }
 

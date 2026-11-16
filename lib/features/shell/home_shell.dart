@@ -6,7 +6,6 @@ import '../../core/theme/icons.dart';
 
 import '../../ingestion/email/email_sync.dart';
 import '../../ingestion/ingestion_service.dart';
-import '../../llm/llm_providers.dart';
 import '../../providers.dart';
 import '../settings/background_sync_setup.dart';
 import 'share_outcome.dart';
@@ -64,8 +63,6 @@ class _HomeShellState extends ConsumerState<HomeShell> {
   @override
   Widget build(BuildContext context) {
     final index = widget.shell.currentIndex;
-    // Keeps the AI jobs alive so they run after each sync.
-    ref.listen(aiJobsProvider, (_, _) {});
     ref.listen(shareIntakeProvider, (_, outcome) {
       if (outcome != null) showShareOutcome(context, outcome);
     });

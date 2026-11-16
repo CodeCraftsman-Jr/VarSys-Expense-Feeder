@@ -85,7 +85,7 @@
         <meta-data
             android:name="flutterEmbedding"
             android:value="2" />
-        <!-- Model downloads run as a dataSync foreground service through WorkManager.
+        <!-- The background sync (SyncWorker) runs as a dataSync foreground service through WorkManager.
              Android 14+ crashes the app unless the service declares that type. -->
         <service
             android:name="androidx.work.impl.foreground.SystemForegroundService"

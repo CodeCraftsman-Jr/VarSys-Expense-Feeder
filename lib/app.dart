@@ -12,7 +12,6 @@ import 'features/lock/app_lock_gate.dart';
 import 'features/onboarding/onboarding_screen.dart';
 import 'data/db/tables.dart';
 import 'features/settings/email_connect_screen.dart';
-import 'features/settings/llm_settings_screen.dart';
 import 'features/settings/messages_screen.dart';
 import 'features/settings/settings_screen.dart';
 import 'features/shell/home_shell.dart';
@@ -39,7 +38,6 @@ final _routerProvider = Provider<GoRouter>((ref) {
       ),
       GoRoute(path: '/email/connect', builder: (_, _) => const EmailConnectScreen()),
       GoRoute(path: signInPath, builder: (_, _) => const SignInScreen()),
-      GoRoute(path: '/llm', builder: (_, _) => const LlmSettingsScreen()),
       StatefulShellRoute.indexedStack(
         builder: (_, _, shell) => HomeShell(shell: shell),
         branches: [

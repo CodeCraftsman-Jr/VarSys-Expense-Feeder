@@ -3,7 +3,7 @@ import 'dart:convert';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../llm/llm_providers.dart' show httpClientProvider;
+import 'package:http/http.dart' as http;
 import '../feed/feed_sync.dart';
 import '../providers.dart';
 import 'app_info.dart';
@@ -63,6 +63,13 @@ class AccountState {
     deviceMessage: deviceMessage,
   );
 }
+
+/// The one HTTP client for sign-in and the team feed; closed with the app.
+final httpClientProvider = Provider<http.Client>((ref) {
+  final c = http.Client();
+  ref.onDispose(c.close);
+  return c;
+});
 
 final varsysAuthClientProvider = Provider((ref) => VarSysAuthClient(ref.watch(httpClientProvider)));
 

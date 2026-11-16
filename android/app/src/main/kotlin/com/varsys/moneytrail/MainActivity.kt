@@ -1,18 +1,14 @@
 package com.varsys.moneytrail
 
 import android.Manifest
-import android.app.ActivityManager
 import android.content.Intent
 import android.content.pm.PackageManager
-import android.net.ConnectivityManager
-import android.os.BatteryManager
 import android.os.Build
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
 import android.net.Uri
 import android.os.PowerManager
-import android.os.StatFs
 import android.provider.Settings
 import android.provider.Telephony
 import android.view.WindowManager
@@ -120,7 +116,6 @@ class MainActivity : FlutterFragmentActivity() {
         }
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "moneytrail/device").setMethodCallHandler { call, result ->
             when (call.method) {
-                "profile" -> result.success(deviceProfile())
                 // Phone name and app version, sent when this phone registers for the team feed.
                 "appInfo" -> {
                     val info = packageManager.getPackageInfo(packageName, 0)
@@ -131,16 +126,6 @@ class MainActivity : FlutterFragmentActivity() {
                             "version" to "${info.versionName}+$code",
                         )
                     )
-                }
-                // True on mobile data or a metered hotspot: big downloads ask first.
-                "isMetered" -> {
-                    val cm = getSystemService(CONNECTIVITY_SERVICE) as ConnectivityManager
-                    result.success(cm.activeNetwork == null || cm.isActiveNetworkMetered)
-                }
-                // Background on-device AI runs more often while charging.
-                "isCharging" -> {
-                    val bm = getSystemService(BATTERY_SERVICE) as BatteryManager
-                    result.success(bm.isCharging)
                 }
                 // True when Android lets the app run in the background without battery limits.
                 "batteryUnrestricted" -> {
@@ -231,35 +216,6 @@ class MainActivity : FlutterFragmentActivity() {
         intent.putExtra(EXTRA_HANDLED, true)
         pendingShares.add(share)
         return true
-    }
-
-    /** What the on-device model picker needs to choose a model that fits. */
-    private fun deviceProfile(): Map<String, Any?> {
-        val am = getSystemService(ACTIVITY_SERVICE) as ActivityManager
-        val mem = ActivityManager.MemoryInfo().also { am.getMemoryInfo(it) }
-        val stat = StatFs(filesDir.absolutePath)
-        val openCl = listOf(
-            "/vendor/lib64/libOpenCL.so",
-            "/system/vendor/lib64/libOpenCL.so",
-            "/system/lib64/libOpenCL.so",
-            // Mali drivers expose OpenCL through the GLES driver.
-            "/vendor/lib64/egl/libGLES_mali.so",
-        ).any { File(it).exists() }
-        return mapOf(
-            "totalRamBytes" to mem.totalMem,
-            "availRamBytes" to mem.availMem,
-            "lowRamDevice" to am.isLowRamDevice,
-            "sdkInt" to Build.VERSION.SDK_INT,
-            "abis" to Build.SUPPORTED_ABIS.toList(),
-            "manufacturer" to Build.MANUFACTURER,
-            "model" to Build.MODEL,
-            "hardware" to Build.HARDWARE,
-            "board" to Build.BOARD,
-            "socManufacturer" to if (Build.VERSION.SDK_INT >= 31) Build.SOC_MANUFACTURER else null,
-            "socModel" to if (Build.VERSION.SDK_INT >= 31) Build.SOC_MODEL else null,
-            "freeStorageBytes" to stat.availableBytes,
-            "hasOpenCl" to openCl,
-        )
     }
 
     private fun hasSmsPermission() =

@@ -12,7 +12,6 @@ import '../../providers.dart';
 import '../../ui/widgets.dart';
 import 'account_card.dart';
 import 'email_source_card.dart';
-import 'llm_status_card.dart';
 import 'background_sync_tile.dart';
 import 'sms_alerts_tile.dart';
 import 'security_card.dart';
@@ -41,8 +40,6 @@ class SettingsScreen extends ConsumerWidget {
             const _SmsCard(),
             const SizedBox(height: 10),
             const EmailSourceCard(),
-            const SizedBox(height: 10),
-            const LlmStatusCard(),
             const SizedBox(height: 20),
             const SectionHeader('Appearance'),
             SegmentedButton<ThemeMode>(

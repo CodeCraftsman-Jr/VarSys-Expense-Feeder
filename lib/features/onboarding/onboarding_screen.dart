@@ -47,14 +47,15 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
               Text('Your money,\ntracked for you.', style: context.text.displaySmall?.copyWith(height: 1.05)),
               const SizedBox(height: 14),
               Text(
-                'MoneyTrail reads bank, card & UPI alerts, sorts every payment into categories, '
-                'and never counts the same payment twice. Built India-first; works with 30+ currencies.',
+                'MoneyTrail reads your bank, card & UPI alerts and sends each payment to your team '
+                'on Joint Journey, where it is sorted. It never counts the same payment twice. '
+                'Built India-first; works with 30+ currencies.',
                 style: context.text.bodyLarge?.copyWith(color: context.colors.onSurfaceVariant, height: 1.4),
               ),
               const SizedBox(height: 24),
               const _Point(
                 icon: PhosphorIconsFill.shieldCheck,
-                text: 'Parsed on-device — messages never leave your phone',
+                text: 'Alerts are read on this phone, then sent only to your own team',
               ),
               const _Point(icon: PhosphorIconsFill.gitMerge, text: 'Smart dedup across SMS and email'),
               const Spacer(),
