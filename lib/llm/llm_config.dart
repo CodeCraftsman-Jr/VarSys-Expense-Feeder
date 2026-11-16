@@ -130,9 +130,7 @@ class LlmConfig {
     this.presetId,
     this.baseUrl = '',
     this.model = '',
-    this.aiCategorise = true,
     this.aiReadUnparsed = false,
-    this.assistant = true,
   });
 
   /// Null until the user saves a connection.
@@ -140,14 +138,8 @@ class LlmConfig {
   final String baseUrl;
   final String model;
 
-  /// Sends merchant / amount / date / mode of uncategorised transactions.
-  final bool aiCategorise;
-
   /// Sends the raw text of messages the rules could not read. Off by default.
   final bool aiReadUnparsed;
-
-  /// Sends the user's questions and tool results computed on-device.
-  final bool assistant;
 
   LlmPreset get preset => LlmPresets.byId(presetId);
   bool get isConfigured => presetId != null && model.isNotEmpty && preset.available;
@@ -157,17 +149,13 @@ class LlmConfig {
   static const _kPreset = 'llm.provider';
   static const _kBase = 'llm.baseUrl';
   static const _kModel = 'llm.model';
-  static const _kCat = 'llm.aiCategorise';
   static const _kRead = 'llm.aiReadUnparsed';
-  static const _kChat = 'llm.assistant';
 
   static LlmConfig load(SharedPreferences p) => LlmConfig(
     presetId: p.getString(_kPreset),
     baseUrl: p.getString(_kBase) ?? '',
     model: p.getString(_kModel) ?? '',
-    aiCategorise: p.getBool(_kCat) ?? true,
     aiReadUnparsed: p.getBool(_kRead) ?? false,
-    assistant: p.getBool(_kChat) ?? true,
   );
 
   Future<void> save(SharedPreferences p) async {
@@ -178,9 +166,7 @@ class LlmConfig {
     }
     await p.setString(_kBase, baseUrl);
     await p.setString(_kModel, model);
-    await p.setBool(_kCat, aiCategorise);
     await p.setBool(_kRead, aiReadUnparsed);
-    await p.setBool(_kChat, assistant);
   }
 
   LlmConfig copyWith({
@@ -188,16 +174,12 @@ class LlmConfig {
     bool clearPreset = false,
     String? baseUrl,
     String? model,
-    bool? aiCategorise,
     bool? aiReadUnparsed,
-    bool? assistant,
   }) => LlmConfig(
     presetId: clearPreset ? null : presetId ?? this.presetId,
     baseUrl: baseUrl ?? this.baseUrl,
     model: model ?? this.model,
-    aiCategorise: aiCategorise ?? this.aiCategorise,
     aiReadUnparsed: aiReadUnparsed ?? this.aiReadUnparsed,
-    assistant: assistant ?? this.assistant,
   );
 }
 

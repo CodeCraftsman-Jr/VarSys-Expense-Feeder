@@ -56,43 +56,78 @@ class _BackgroundSyncTileState extends State<BackgroundSyncTile> with WidgetsBin
   Widget build(BuildContext context) {
     final ok = _unrestricted;
     if (ok == null) return const SizedBox.shrink();
-    final tile = Padding(
-      padding: const EdgeInsets.only(top: 8),
-      child: ListTile(
-        contentPadding: EdgeInsets.zero,
-        leading: const Icon(PhosphorIconsRegular.clockCounterClockwise),
-        title: const Text('Background sync'),
-        subtitle: Text(
-          ok
-              ? 'Allowed. Bank SMS are sent even when the app is closed.'
-              : 'Battery limits may delay sending. Allow unrestricted use so nothing waits.',
-        ),
-        trailing: ok
-            ? null
-            : FilledButton.tonal(
-                onPressed: () async {
-                  await _device.invokeMethod<void>('requestNotifications');
-                  await _device.invokeMethod<void>('requestBatteryUnrestricted');
-                },
-                child: const Text('Allow'),
-              ),
-      ),
-    );
     return Column(
       children: [
-        tile,
+        _Row(
+          icon: PhosphorIconsRegular.clockCounterClockwise,
+          title: 'Background sync',
+          subtitle: ok
+              ? 'Allowed. Bank SMS are sent even when the app is closed.'
+              : 'Battery limits may delay sending. Allow unrestricted use so nothing waits.',
+          action: ok
+              ? null
+              : FilledButton.tonal(
+                  style: _compact,
+                  onPressed: () async {
+                    await _device.invokeMethod<void>('requestNotifications');
+                    await _device.invokeMethod<void>('requestBatteryUnrestricted');
+                  },
+                  child: const Text('Allow'),
+                ),
+        ),
         if (_autostart)
-          ListTile(
-            contentPadding: EdgeInsets.zero,
-            leading: const Icon(PhosphorIconsRegular.lightning),
-            title: const Text('Autostart'),
-            subtitle: const Text('Xiaomi phones also need MoneyTrail switched on in the Autostart list.'),
-            trailing: FilledButton.tonal(
+          _Row(
+            icon: PhosphorIconsRegular.lightning,
+            title: 'Autostart',
+            subtitle: 'Xiaomi phones also need MoneyTrail switched on in the Autostart list.',
+            action: FilledButton.tonal(
+              style: _compact,
               onPressed: () => _device.invokeMethod<bool>('openAutostart'),
               child: const Text('Open'),
             ),
           ),
       ],
+    );
+  }
+}
+
+/// The app theme gives every button a full-width minimum size, which a ListTile's trailing slot
+/// cannot hold (the whole card then fails to lay out). These rows are laid out by hand with a
+/// compact button instead.
+final _compact = FilledButton.styleFrom(minimumSize: const Size(0, 44), padding: const EdgeInsets.symmetric(horizontal: 16));
+
+class _Row extends StatelessWidget {
+  const _Row({required this.icon, required this.title, required this.subtitle, this.action});
+
+  final IconData icon;
+  final String title;
+  final String subtitle;
+  final Widget? action;
+
+  @override
+  Widget build(BuildContext context) {
+    final text = Theme.of(context).textTheme;
+    final muted = Theme.of(context).colorScheme.onSurfaceVariant;
+    return Padding(
+      padding: const EdgeInsets.only(top: 8),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          Icon(icon, color: muted),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(title, style: text.titleMedium),
+                const SizedBox(height: 2),
+                Text(subtitle, style: text.bodySmall?.copyWith(color: muted)),
+              ],
+            ),
+          ),
+          if (action != null) ...[const SizedBox(width: 12), action!],
+        ],
+      ),
     );
   }
 }

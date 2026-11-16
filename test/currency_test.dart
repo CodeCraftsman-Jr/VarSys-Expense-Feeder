@@ -1,6 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:moneytrail/core/format.dart';
-import 'package:moneytrail/ui/amount_field.dart';
 
 void main() {
   tearDown(() => Currencies.home = 'INR');
@@ -83,26 +82,4 @@ void main() {
     });
   });
 
-  group('amount input', () {
-    test('follows the currency digits and grouping', () {
-      expect(amountInputText(12345600), '1,23,456');
-      expect(amountInputText(123456, currency: 'USD'), '1,234.56');
-      expect(amountInputText(1200, currency: 'JPY'), '1,200');
-      expect(amountInputText(12500, currency: 'KWD'), '12.5');
-      expect(parseAmountInput('1,234.56', currency: 'USD'), 123456);
-      expect(parseAmountInput('1,200', currency: 'JPY'), 1200);
-      expect(parseAmountInput('12.505', currency: 'KWD'), 12505);
-    });
-
-    test('formatter limits decimals per currency', () {
-      const kwd = AmountInputFormatter(currency: 'KWD');
-      const jpy = AmountInputFormatter(currency: 'JPY');
-      const usd = AmountInputFormatter(currency: 'USD');
-      TextEditingValue type(AmountInputFormatter f, String s) =>
-          f.formatEditUpdate(TextEditingValue.empty, TextEditingValue(text: s));
-      expect(type(kwd, '1234.5678').text, '1,234.567');
-      expect(type(jpy, '1234.5').text, '1,234');
-      expect(type(usd, '1234567').text, '1,234,567');
-    });
-  });
 }

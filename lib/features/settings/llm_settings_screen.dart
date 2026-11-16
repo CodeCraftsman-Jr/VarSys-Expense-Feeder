@@ -312,20 +312,6 @@ class _LlmSettingsScreenState extends ConsumerState<LlmSettingsScreen> {
             child: Column(
               children: [
                 SwitchListTile(
-                  value: config.aiCategorise,
-                  onChanged: (v) => cfg.change((c) => c.copyWith(aiCategorise: v)),
-                  secondary: const Icon(PhosphorIconsRegular.tag),
-                  title: const Text('AI categorisation'),
-                  subtitle: Text(
-                    onDevice
-                        ? 'Suggests categories for transactions left as "Other". Runs in the background a few at a '
-                              'time (about every 6 hours, more often while charging) and pauses whenever you ask '
-                              'something. Slow on phones, so it starts off.'
-                        : 'For transactions left as "Other": sends merchant, UPI handle, amount, date and payment '
-                              'mode. Never message text or balances.',
-                  ),
-                ),
-                SwitchListTile(
                   value: config.aiReadUnparsed,
                   onChanged: (v) => cfg.change((c) => c.copyWith(aiReadUnparsed: v)),
                   secondary: const Icon(PhosphorIconsRegular.chatText),
@@ -333,20 +319,10 @@ class _LlmSettingsScreenState extends ConsumerState<LlmSettingsScreen> {
                   subtitle: Text(
                     onDevice
                         ? 'Reads bank messages our rules couldn\'t, on this phone. Takes a minute or more per '
-                              'message on most phones, so it runs in the background a couple at a time and yields '
-                              'to Ask. Off by default.'
+                              'message on most phones, so it runs in the background a couple at a time. '
+                              'Off by default.'
                         : 'Sends the full text of bank messages our rules couldn\'t read. These can include account '
                               'digits, balances and names. Off by default.',
-                  ),
-                ),
-                SwitchListTile(
-                  value: config.assistant,
-                  onChanged: (v) => cfg.change((c) => c.copyWith(assistant: v)),
-                  secondary: const Icon(PhosphorIconsRegular.sparkle),
-                  title: const Text('Assistant chat'),
-                  subtitle: const Text(
-                    'Sends your questions and the results of queries run on this phone (totals, matching '
-                    'transactions). Raw messages are never included.',
                   ),
                 ),
               ],

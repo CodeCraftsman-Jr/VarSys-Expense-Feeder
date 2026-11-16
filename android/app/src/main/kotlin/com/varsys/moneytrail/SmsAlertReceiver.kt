@@ -16,7 +16,7 @@ import java.text.NumberFormat
 import java.util.Locale
 
 /**
- * Posts "₹250 debited · HDFC — tap to review" (or "USD 12.50 debited · …") as
+ * Posts "₹250 debited · HDFC — tap to open" (or "USD 12.50 debited · …") as
  * soon as a bank SMS arrives.
  *
  * Detection here is deliberately small and conservative: a DLT bank-style
@@ -182,7 +182,7 @@ class SmsAlertReceiver : BroadcastReceiver() {
             val notification = NotificationCompat.Builder(context, CHANNEL_ID)
                 .setSmallIcon(R.drawable.ic_stat_varsys)
                 .setContentTitle("${alert.amount} $verb · ${alert.bank}")
-                .setContentText("Tap to review")
+                .setContentText("Captured. Your team sorts it on the web.")
                 .setCategory(NotificationCompat.CATEGORY_STATUS)
                 .setPriority(NotificationCompat.PRIORITY_DEFAULT)
                 .setAutoCancel(true)

@@ -15,10 +15,9 @@ import '../../data/db/database.dart';
 import '../../providers.dart';
 import '../../ui/widgets.dart';
 import 'feed_upload_status.dart';
-import 'category_picker.dart';
-import 'conversion_sheet.dart';
-import '../settings/manage_widgets.dart' show accountLabel;
-import 'edit_transaction_sheet.dart';
+
+/// "HDFC Bank ••1234" style label.
+String accountLabel(Account a) => a.last4 == null || a.last4!.isEmpty ? a.name : '${a.name} ••${a.last4}';
 
 Future<void> showTransactionSheet(BuildContext context, int id) => showModalBottomSheet(
   context: context,
@@ -44,7 +43,6 @@ class TransactionSheet extends ConsumerWidget {
     final view = ref.watch(txnProvider(id)).value;
     if (view == null) return const SizedBox(height: 200);
     final t = view.txn;
-    final db = ref.read(databaseProvider);
     final credit = t.direction == TxnDirection.credit;
     final sources = ref.watch(txnSourcesProvider(id)).value ?? const [];
 
@@ -117,97 +115,20 @@ class TransactionSheet extends ConsumerWidget {
             ),
           ),
         ],
-        const SizedBox(height: 6),
-        Center(
-          child: TextButton.icon(
-            onPressed: () => showEditTransactionSheet(context, view),
-            icon: const Icon(PhosphorIconsRegular.pencilSimple, size: 18),
-            label: const Text('Edit details'),
-          ),
-        ),
         if (t.isForeign && t.homeMinor == null) ...[
-          const SizedBox(height: 18),
-          AppCard(
-            color: Palette.amber.withValues(alpha: 0.12),
-            padding: const EdgeInsets.all(14),
-            child: Row(
-              children: [
-                const Icon(PhosphorIconsFill.globeHemisphereWest, color: Palette.amber),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Text("Paid in ${t.currency}, so it isn't in your ${Currencies.home} totals or budgets yet."),
-                ),
-                TextButton(
-                  onPressed: () => showConversionSheet(context, t),
-                  child: Text('Add ${currencySymbol(Currencies.home)}'),
-                ),
-              ],
-            ),
-          ),
-        ] else if (t.isForeign)
+          const SizedBox(height: 14),
           Center(
-            child: TextButton.icon(
-              onPressed: () => showConversionSheet(context, t),
-              icon: const Icon(PhosphorIconsRegular.arrowsLeftRight, size: 18),
-              label: Text('Change the ${Currencies.home} amount'),
-            ),
-          ),
-        const SizedBox(height: 16),
-        const SectionHeader('Category'),
-        CategoryPicker(
-          selectedId: t.categoryId,
-          income: credit,
-          onSelected: (c) => db.setCategory(id, c.id, learnPattern: t.merchant?.toLowerCase()),
-        ),
-        if (t.merchant != null)
-          Padding(
-            padding: const EdgeInsets.only(top: 8, left: 4),
             child: Text(
-              'Future ${t.merchant} transactions will use the category you pick.',
+              'Paid in ${t.currency}. Your team adds the rupee amount on the web.',
               style: context.text.bodySmall?.copyWith(color: context.colors.onSurfaceVariant),
+              textAlign: TextAlign.center,
             ),
           ),
-        const SizedBox(height: 12),
-        SwitchListTile(
-          contentPadding: const EdgeInsets.symmetric(horizontal: 4),
-          value: t.isTransfer,
-          onChanged: (v) => db.setTransfer(id, v),
-          title: const Text('Transfer between my accounts'),
-          subtitle: const Text('Excluded from spending and income'),
-          secondary: const Icon(PhosphorIconsRegular.arrowsLeftRight),
-        ),
+        ],
         const SizedBox(height: 12),
         SectionHeader('Sources (${sources.length})'),
         for (final s in sources) _SourceCard(message: s),
         _TransactionFeedUploadSection(id: id),
-        const SizedBox(height: 20),
-        OutlinedButton.icon(
-          style: OutlinedButton.styleFrom(
-            foregroundColor: Palette.red,
-            minimumSize: const Size.fromHeight(50),
-            side: BorderSide(color: Palette.red.withValues(alpha: 0.4)),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-          ),
-          onPressed: () async {
-            final ok = await showDialog<bool>(
-              context: context,
-              builder: (c) => AlertDialog(
-                title: const Text('Delete transaction?'),
-                content: const Text('The source message stays hidden so it won\'t be re-imported.'),
-                actions: [
-                  TextButton(onPressed: () => Navigator.pop(c, false), child: const Text('Cancel')),
-                  TextButton(onPressed: () => Navigator.pop(c, true), child: const Text('Delete')),
-                ],
-              ),
-            );
-            if (ok == true && context.mounted) {
-              Navigator.pop(context);
-              await db.deleteTxn(id);
-            }
-          },
-          icon: const Icon(PhosphorIconsRegular.trash),
-          label: const Text('Delete'),
-        ),
       ],
     );
   }

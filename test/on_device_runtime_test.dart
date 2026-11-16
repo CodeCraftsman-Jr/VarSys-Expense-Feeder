@@ -1,15 +1,10 @@
 import 'dart:async';
-import 'dart:convert';
 
 import 'package:drift/drift.dart' hide isNull, isNotNull;
 import 'package:drift/native.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:moneytrail/data/db/database.dart';
-import 'package:moneytrail/llm/agent/finance_agent.dart';
-import 'package:moneytrail/llm/agent/finance_tools.dart';
-import 'package:moneytrail/llm/agent/tool_result_budget.dart';
-import 'package:moneytrail/llm/ai_categorizer.dart';
 import 'package:moneytrail/llm/llm_client.dart';
 import 'package:moneytrail/llm/llm_config.dart';
 import 'package:moneytrail/llm/llm_providers.dart';
@@ -75,10 +70,6 @@ class FakeSmallLlm implements LlmClient, LlmBudget, LlmStreamingClient {
   Future<List<String>> listModels() async => const [];
 }
 
-LlmResponse _text(String t) => LlmResponse(
-  message: AssistantMessage(text: t),
-  stop: LlmStop.endTurn,
-);
 LlmResponse _call(String name, Map<String, dynamic> args) => LlmResponse(
   message: AssistantMessage(
     toolCalls: [ToolCall(id: 'c', name: name, arguments: args)],
@@ -210,114 +201,6 @@ void main() {
     });
   });
 
-  group('tool result trimming', () {
-    Map<String, dynamic> bigResult(int n) => {
-      'from': '2026-09-01',
-      'matched': n,
-      'total_debit': 123456.0,
-      'total_debit_formatted': '₹1,23,456',
-      'returned': n,
-      'transactions': [
-        for (var i = 0; i < n; i++)
-          {
-            'id': i,
-            'date': '2026-09-${(i % 28 + 1).toString().padLeft(2, '0')}',
-            'amount': 250.0,
-            'merchant': 'Swiggy $i',
-            'note': null,
-          },
-      ],
-    };
-
-    test('caps rows, keeps totals, drops raw twins of formatted numbers', () {
-      final full = jsonEncode(bigResult(25));
-      final out = compactToolJson(bigResult(25), ToolResultBudget.forContext(4096));
-      final j = jsonDecode(out) as Map<String, dynamic>;
-      expect((j['transactions'] as List).length, 10);
-      expect(j['transactions_omitted'], 15);
-      expect(j['returned'], 10);
-      expect(j['matched'], 25);
-      expect(j['total_debit_formatted'], '₹1,23,456');
-      expect(j.containsKey('total_debit'), isFalse);
-      expect((j['transactions'] as List).first['amount'], 250);
-      expect((j['transactions'] as List).first.containsKey('note'), isFalse);
-      expect(out.length, lessThan(full.length ~/ 2));
-      // ignore: avoid_print
-      print('tool result: ${full.length} → ${out.length} chars');
-    });
-
-    test('shrinks further to fit the character budget', () {
-      final out = compactToolJson(bigResult(25), const ToolResultBudget(maxRows: 25, maxChars: 600));
-      expect(out.length, lessThanOrEqualTo(600));
-      expect(jsonDecode(out)['total_debit_formatted'], '₹1,23,456');
-    });
-
-    test('small results are unchanged apart from compaction', () {
-      final j = jsonDecode(
-        compactToolJson({
-          'categories': [
-            {'name': 'Food'},
-          ],
-        }, ToolResultBudget.forContext(2048)),
-      );
-      expect(j, {
-        'categories': [
-          {'name': 'Food'},
-        ],
-      });
-    });
-  });
-
-  group('agent on a small model', () {
-    late AppDatabase db;
-    setUp(() async {
-      driftRuntimeOptions.dontWarnAboutMultipleDatabases = true;
-      db = AppDatabase(DatabaseConnection(NativeDatabase.memory()));
-      for (var i = 0; i < 30; i++) {
-        await db.addManual(
-          amountMinor: 10000 + i,
-          direction: TxnDirection.debit,
-          at: DateTime(2026, 10, 1 + i % 18),
-          merchant: 'Shop $i',
-        );
-      }
-    });
-    tearDown(() => db.close());
-
-    test('compacts tool results, caps output tokens and streams the answer', () async {
-      final llm = FakeSmallLlm([
-        (_) => _call('query_transactions', {'from': '2026-10-01', 'to': '2026-10-20', 'limit': 50}),
-        (msgs) {
-          final r = (msgs.last as ToolResultsMessage).results.single;
-          final j = jsonDecode(r.content) as Map<String, dynamic>;
-          expect((j['transactions'] as List).length, 10);
-          expect(j['transactions_omitted'], 20);
-          return _text('You spent **₹3,004** at 30 shops.');
-        },
-      ]);
-      final drafts = <String>[];
-      final agent = FinanceAgent(
-        client: llm,
-        tools: FinanceTools(db, now: () => DateTime(2026, 10, 20)),
-      );
-      final res = await agent.run(const [], 'What did I spend?', onText: drafts.add);
-      expect(res.text, 'You spent **₹3,004** at 30 shops.');
-      expect(llm.requests.map((r) => r.maxTokens), everyElement(1024));
-      expect(drafts, contains(''));
-      expect(drafts.last, res.text);
-    });
-
-    test('stops after four steps on a small model', () async {
-      final llm = FakeSmallLlm([
-        for (var i = 0; i < 4; i++) (_) => _call('list_categories', const {}),
-        (_) => _text('Best effort.'),
-      ]);
-      final res = await FinanceAgent(client: llm, tools: FinanceTools(db)).run(const [], 'loop');
-      expect(res.hitStepLimit, isTrue);
-      expect(llm.requests, hasLength(5));
-    });
-  });
-
   group('background jobs', () {
     late AppDatabase db;
     setUp(() async {
@@ -342,28 +225,6 @@ void main() {
     });
     tearDown(() => db.close());
 
-    test('categoriser honours the batch cap and resumes from the cursor in id order', () async {
-      final llm = FakeSmallLlm([]);
-      final job = AiCategorizer(db: db, client: llm, batchSize: 8, maxBatches: 3, pause: Duration.zero);
-      final r = await job.run();
-      expect(llm.requests, hasLength(3));
-      expect(r.stoppedEarly, isTrue);
-      final ids = [for (final m in (await job.candidates())) m.id];
-      expect(r.maxId, ids[23]);
-      final next = await job.candidates(afterId: r.maxId!);
-      expect(next.first.id, ids[24]);
-    });
-
-    test('categoriser yields to the user between batches', () async {
-      var calls = 0;
-      final llm = FakeSmallLlm([]);
-      final job = AiCategorizer(db: db, client: llm, batchSize: 8, pause: Duration.zero, shouldStop: () => ++calls > 2);
-      final r = await job.run();
-      expect(llm.requests, hasLength(2));
-      expect(r.stoppedEarly, isTrue);
-      expect(r.error, isNull);
-    });
-
     test('policy: every 6 h, every 30 min while charging', () {
       const p = OnDeviceJobPolicy();
       final now = DateTime(2026, 10, 20, 12);
@@ -381,7 +242,7 @@ void main() {
               .millisecondsSinceEpoch,
       });
       final prefs = await SharedPreferences.getInstance();
-      await const LlmConfig(presetId: 'ondevice', model: 'gemma-4-e2b', aiCategorise: true).save(prefs);
+      await const LlmConfig(presetId: 'ondevice', model: 'gemma-4-e2b', aiReadUnparsed: true).save(prefs);
       final llm = FakeSmallLlm([]);
       final runtime = OnDeviceRuntime();
       final c = ProviderContainer(
@@ -403,13 +264,6 @@ void main() {
       return (c, llm);
     }
 
-    test('on-device auto-run is capped and records its time', () async {
-      final (c, llm) = await container();
-      await c.read(aiJobsProvider.notifier).runAfterSync();
-      expect(llm.requests, hasLength(3));
-      expect(c.read(prefsProvider).getInt(AiJobsController.lastAutoRunKey), isNotNull);
-    });
-
     test('on-device auto-run waits for the interval', () async {
       final (c, llm) = await container(lastRunAgoMinutes: 60);
       await c.read(aiJobsProvider.notifier).runAfterSync();
@@ -430,7 +284,6 @@ void main() {
     await const LlmConfig(
       presetId: 'openai',
       model: 'gpt-5-mini',
-      aiCategorise: true,
       aiReadUnparsed: true,
     ).save(prefs);
     final c = ProviderContainer(
@@ -440,13 +293,11 @@ void main() {
     await c.read(onDeviceModelsProvider.notifier).use(ModelCatalog.gemma4E2b);
     final cfg = c.read(llmConfigProvider);
     expect(cfg.presetId, 'ondevice');
-    expect(cfg.aiCategorise, isFalse);
     expect(cfg.aiReadUnparsed, isFalse);
-    expect(cfg.assistant, isTrue);
 
     // Choices made while on-device are kept when re-picking a model.
-    await c.read(llmConfigProvider.notifier).change((x) => x.copyWith(aiCategorise: true));
+    await c.read(llmConfigProvider.notifier).change((x) => x.copyWith(aiReadUnparsed: true));
     await c.read(onDeviceModelsProvider.notifier).use(ModelCatalog.gemma4E4b);
-    expect(c.read(llmConfigProvider).aiCategorise, isTrue);
+    expect(c.read(llmConfigProvider).aiReadUnparsed, isTrue);
   });
 }

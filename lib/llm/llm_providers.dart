@@ -8,7 +8,6 @@ import 'package:http/http.dart' as http;
 import '../data/db/database.dart';
 import '../ingestion/email/email_sync.dart';
 import '../providers.dart';
-import 'ai_categorizer.dart';
 import 'fallback_parser.dart';
 import 'llm_client.dart';
 import 'llm_config.dart';
@@ -119,7 +118,7 @@ class OnDeviceJobPolicy {
       lastRun == null || now.difference(lastRun) >= (charging ? chargingInterval : interval);
 }
 
-/// Background AI work: reading unreadable messages and categorising.
+/// Background AI work: reading messages the rules could not read.
 /// Cloud: runs after each sync when the matching privacy toggle is on.
 /// On-device: see [OnDeviceJobPolicy]; it always yields to Ask requests and
 /// pauses while the app is in the background, resuming later.
@@ -138,7 +137,6 @@ class AiJobsController extends Notifier<AiJobsState> {
   final bool Function() _isForeground;
   final OnDeviceRuntime _runtime;
 
-  static const _cursorKey = 'llm.categoriseCursor';
   static const lastAutoRunKey = 'llm.onDevice.lastAutoRun';
   DateTime? _backoffUntil;
   var _autoRunPending = false;
@@ -188,11 +186,10 @@ class AiJobsController extends Notifier<AiJobsState> {
   Future<void> runAfterSync() async {
     final config = ref.read(llmConfigProvider);
     if (!config.isConfigured || _busy) return;
-    if (!config.aiReadUnparsed && !config.aiCategorise) return;
+    if (!config.aiReadUnparsed) return;
     if (_backoffUntil != null && DateTime.now().isBefore(_backoffUntil!)) return;
     if (await _client() is LlmBudget) return _autoRunOnDevice();
-    if (config.aiReadUnparsed) await readUnparsed();
-    if (config.aiCategorise) await categorise();
+    await readUnparsed();
   }
 
   Future<void> _autoRunOnDevice({bool resuming = false}) async {
@@ -218,12 +215,7 @@ class AiJobsController extends Notifier<AiJobsState> {
       }
       _yielded = false;
       final config = ref.read(llmConfigProvider);
-      var stopped = false;
-      if (config.aiReadUnparsed) {
-        final r = await readUnparsed(maxBatches: policy.maxBatchesPerRun);
-        stopped = _yielded || r?.error != null;
-      }
-      if (config.aiCategorise && !stopped) await categorise(maxBatches: policy.maxBatchesPerRun);
+      if (config.aiReadUnparsed) await readUnparsed(maxBatches: policy.maxBatchesPerRun);
       if (_yielded) {
         debugPrint('[moneytrail-ondevice] background AI paused for the user; will resume');
         _scheduleResume();
@@ -278,48 +270,6 @@ class AiJobsController extends Notifier<AiJobsState> {
     } catch (e, st) {
       debugPrint('AI reader failed: $e\n$st');
       state = AiJobsState(error: 'AI reader failed: $e');
-      return null;
-    }
-  }
-
-  /// [all] re-checks every eligible transaction; otherwise only ones added
-  /// since the last run.
-  Future<CategoriseReport?> categorise({bool all = false, int? maxBatches}) async {
-    final config = ref.read(llmConfigProvider);
-    if (!config.aiCategorise || _busy) return null;
-    final client = await _client();
-    if (client == null) return null;
-    final onDevice = client is LlmBudget;
-    final prefs = ref.read(prefsProvider);
-    final cursor = all ? 0 : prefs.getInt(_cursorKey) ?? 0;
-    final job = AiCategorizer(
-      db: ref.read(databaseProvider),
-      client: client,
-      batchSize: onDevice ? 8 : 40,
-      maxBatches: maxBatches,
-      shouldStop: onDevice ? _shouldYield : null,
-    );
-    if ((await job.candidates(afterId: cursor)).isEmpty) {
-      if (all) state = const AiJobsState(lastResult: 'Nothing left in "Other" to categorise');
-      return null;
-    }
-    state = const AiJobsState(running: 'Categorising');
-    try {
-      final report = await job.run(
-        afterId: cursor,
-        onProgress: (d, t) => state = AiJobsState(running: 'Categorising', progress: (d, t)),
-      );
-      final maxId = report.maxId;
-      if (maxId != null && maxId > (prefs.getInt(_cursorKey) ?? 0)) await prefs.setInt(_cursorKey, maxId);
-      _noteError(report.error);
-      state = AiJobsState(
-        lastResult: 'AI categories: $report${report.stoppedEarly ? ' · more later' : ''}',
-        error: report.error,
-      );
-      return report;
-    } catch (e, st) {
-      debugPrint('AI categorise failed: $e\n$st');
-      state = AiJobsState(error: 'AI categorisation failed: $e');
       return null;
     }
   }

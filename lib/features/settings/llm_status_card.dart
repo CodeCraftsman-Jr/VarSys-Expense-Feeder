@@ -63,9 +63,7 @@ class LlmStatusCard extends ConsumerWidget {
               spacing: 8,
               runSpacing: 8,
               children: [
-                _Flag('Categorise', config.aiCategorise),
                 _Flag('Read messages', config.aiReadUnparsed),
-                _Flag('Assistant', config.assistant),
               ],
             ),
             if (busy) ...[
@@ -88,7 +86,7 @@ class LlmStatusCard extends ConsumerWidget {
                 ),
               ),
             ],
-            if (config.aiCategorise || (config.aiReadUnparsed && pending > 0)) ...[
+            if (config.aiReadUnparsed && pending > 0) ...[
               const SizedBox(height: 14),
               Row(
                 children: [
@@ -102,14 +100,6 @@ class LlmStatusCard extends ConsumerWidget {
                     ),
                     const SizedBox(width: 10),
                   ],
-                  if (config.aiCategorise)
-                    Expanded(
-                      child: OutlinedButton.icon(
-                        onPressed: busy ? null : () => ctrl.categorise(all: true),
-                        icon: const Icon(PhosphorIconsBold.tag, size: 18),
-                        label: const Text('Categorise'),
-                      ),
-                    ),
                 ],
               ),
             ],

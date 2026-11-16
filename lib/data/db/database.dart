@@ -117,7 +117,8 @@ class AppDatabase extends _$AppDatabase {
       if (from < 5) await m.createTable(feedUploads);
       // v6: exact payload snapshot for local per-transaction sync history.
       if (from < 6) {
-        await m.addColumn(feedUploads, feedUploads.payloadJson);
+        // createTable above already made the current columns for installs older than v5.
+        await _addColumnIfMissing(m, feedUploads, feedUploads.payloadJson);
         await customStatement('CREATE INDEX IF NOT EXISTS idx_feed_uploads_team_time ON feed_uploads (team_id, uploaded_at DESC)');
       }
       // v7: the team's decision for each upload, read back from Joint Journey.

@@ -200,11 +200,9 @@ class OnDeviceModels extends Notifier<OnDeviceState> {
             presetId: 'ondevice',
             model: m.id,
             baseUrl: '',
-            // Background AI is slow on a phone (a minute or more per batch)
-            // and competes with Ask for the model, so both jobs start off
-            // when switching to on-device; the user can turn them on.
+            // Background AI is slow on a phone (a minute or more per batch),
+            // so it starts off when switching to on-device; the user can turn it on.
             aiReadUnparsed: cfg.presetId == 'ondevice' ? cfg.aiReadUnparsed : false,
-            aiCategorise: cfg.presetId == 'ondevice' ? cfg.aiCategorise : false,
           ),
         );
   }
