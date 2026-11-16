@@ -10,11 +10,9 @@ import '../../data/db/database.dart';
 import '../../ingestion/email/email_sync.dart';
 import '../../providers.dart';
 import '../../ui/widgets.dart';
-import 'currency_tile.dart';
-import 'data_section.dart';
-import '../budgets/budget_providers.dart';
+import 'account_card.dart';
 import 'email_source_card.dart';
-import 'llm_status_card.dart';
+import 'background_sync_tile.dart';
 import 'sms_alerts_tile.dart';
 import 'security_card.dart';
 
@@ -24,7 +22,6 @@ class SettingsScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final themeMode = ref.watch(themeModeProvider);
-    final accounts = ref.watch(accountsProvider).value ?? const <Account>[];
 
     return Scaffold(
       body: SafeArea(
@@ -36,54 +33,13 @@ class SettingsScreen extends ConsumerWidget {
               padding: const EdgeInsets.only(left: 4, bottom: 12),
               child: Text('Settings', style: context.text.headlineSmall),
             ),
+            const SectionHeader('Joint Journey'),
+            const AccountCard(),
+            const SizedBox(height: 20),
             const SectionHeader('Sources'),
             const _SmsCard(),
             const SizedBox(height: 10),
             const EmailSourceCard(),
-            const SizedBox(height: 10),
-            const LlmStatusCard(),
-            const SizedBox(height: 20),
-            const SectionHeader('Money'),
-            AppCard(
-              padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 8),
-              child: Column(
-                children: [
-                  const HomeCurrencyTile(),
-                  ListTile(
-                    leading: const Icon(PhosphorIconsRegular.target),
-                    title: const Text('Budgets'),
-                    subtitle: const Text('Monthly and per-category limits'),
-                    trailing: const Icon(PhosphorIconsBold.caretRight, size: 16),
-                    onTap: () => context.push('/budgets'),
-                  ),
-                  SwitchListTile(
-                    secondary: const Icon(PhosphorIconsRegular.bellRinging),
-                    title: const Text('Budget alerts'),
-                    subtitle: const Text('Notify at 80% and 100%'),
-                    value: ref.watch(budgetAlertsProvider),
-                    onChanged: (v) => ref.read(budgetAlertsProvider.notifier).setEnabled(v),
-                  ),
-                  ListTile(
-                    leading: const Icon(PhosphorIconsRegular.bank),
-                    title: const Text('Accounts'),
-                    subtitle: Text(
-                      accounts.isEmpty
-                          ? 'Rename, archive or add cash'
-                          : '${accounts.length} account${accounts.length == 1 ? '' : 's'}',
-                    ),
-                    trailing: const Icon(PhosphorIconsBold.caretRight, size: 16),
-                    onTap: () => context.push('/settings/accounts'),
-                  ),
-                  ListTile(
-                    leading: const Icon(PhosphorIconsRegular.tag),
-                    title: const Text('Categories'),
-                    subtitle: const Text('Add, rename, reorder or delete'),
-                    trailing: const Icon(PhosphorIconsBold.caretRight, size: 16),
-                    onTap: () => context.push('/settings/categories'),
-                  ),
-                ],
-              ),
-            ),
             const SizedBox(height: 20),
             const SectionHeader('Appearance'),
             SegmentedButton<ThemeMode>(
@@ -110,21 +66,23 @@ class SettingsScreen extends ConsumerWidget {
                 children: [
                   ListTile(
                     leading: const Icon(PhosphorIconsRegular.shieldCheck),
-                    title: const Text('Stored only on this phone'),
-                    subtitle: const Text('Messages are parsed on-device. Nothing is uploaded.'),
+                    title: const Text('Team feed data'),
+                    subtitle: const Text(
+                      'While your team feed is on, parsed transaction fields and original SMS or email message '
+                      'text are sent to Joint Journey. Recent request details are saved in this phone’s encrypted database.',
+                    ),
                   ),
-                  const DataExportTiles(),
                   ListTile(
-                    leading: const Icon(PhosphorIconsRegular.trash, color: Palette.coral),
+                    leading: const Icon(PhosphorIconsRegular.trash, color: Palette.red),
                     title: const Text('Reset imported data'),
-                    subtitle: const Text('Clears transactions & messages; keeps categories and rules'),
+                    subtitle: const Text('Clears transactions, messages and saved payloads; keeps upload status'),
                     onTap: () async {
                       final ok = await showDialog<bool>(
                         context: context,
                         builder: (c) => AlertDialog(
                           title: const Text('Reset imported data?'),
                           content: const Text(
-                            'All transactions and parsed messages will be deleted. '
+                            'All transactions, parsed messages and saved request payloads will be deleted. '
                             'You can re-import SMS afterwards.',
                           ),
                           actions: [
@@ -143,12 +101,37 @@ class SettingsScreen extends ConsumerWidget {
                 ],
               ),
             ),
+            const SizedBox(height: 20),
+            const SectionHeader('About'),
+            AppCard(
+              padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 8),
+              child: ListTile(
+                leading: const Icon(PhosphorIconsRegular.listBullets),
+                title: const Text('VarSys MoneyTrail'),
+                subtitle: const Text('Based on Pckt by Pritam Ravani. Free software under GPL-3.0.'),
+                trailing: const Icon(PhosphorIconsBold.caretRight, size: 16),
+                onTap: () => showLicensePage(
+                  context: context,
+                  applicationName: 'VarSys MoneyTrail',
+                  applicationLegalese: _legalese,
+                ),
+              ),
+            ),
           ],
         ),
       ),
     );
   }
 }
+
+/// GPL-3.0 section 5 asks modified versions to say they were changed and to
+/// keep the original notices; this text is shown on the licenses page.
+const _legalese =
+    'VarSys MoneyTrail is a modified version of Pckt '
+    '(https://github.com/pritam-ravani/pckt), copyright its original author.\n\n'
+    'This program is free software: you can redistribute it and/or modify it under the terms '
+    'of the GNU General Public License version 3 as published by the Free Software Foundation. '
+    'It comes with no warranty. Source code: https://github.com/CodeCraftsman-Jr/VarSys-Expense-Feeder';
 
 class _SmsCard extends ConsumerWidget {
   const _SmsCard();
@@ -169,10 +152,10 @@ class _SmsCard extends ConsumerWidget {
               Container(
                 padding: const EdgeInsets.all(10),
                 decoration: BoxDecoration(
-                  color: Palette.mint.withValues(alpha: 0.15),
+                  color: Palette.brand.withValues(alpha: 0.15),
                   borderRadius: BorderRadius.circular(14),
                 ),
-                child: const Icon(PhosphorIconsFill.chatText, color: Palette.mint),
+                child: const Icon(PhosphorIconsFill.chatText, color: Palette.brand),
               ),
               const SizedBox(width: 14),
               Expanded(
@@ -200,7 +183,7 @@ class _SmsCard extends ConsumerWidget {
           ),
           if (sync.error != null) ...[
             const SizedBox(height: 10),
-            Text(sync.error!, style: context.text.bodySmall?.copyWith(color: Palette.coral)),
+            Text(sync.error!, style: context.text.bodySmall?.copyWith(color: Palette.red)),
           ],
           if (stats.isNotEmpty) ...[
             const SizedBox(height: 14),
@@ -211,7 +194,7 @@ class _SmsCard extends ConsumerWidget {
                 InfoPill(
                   icon: PhosphorIconsBold.checkCircle,
                   label: '${stats[ParseStatus.parsed] ?? 0} parsed',
-                  color: Palette.mint,
+                  color: Palette.green,
                 ),
                 InfoPill(icon: PhosphorIconsBold.gitMerge, label: '${stats[ParseStatus.merged] ?? 0} merged'),
                 InfoPill(icon: PhosphorIconsBold.eyeSlash, label: '${stats[ParseStatus.ignored] ?? 0} ignored'),
@@ -225,6 +208,7 @@ class _SmsCard extends ConsumerWidget {
             ),
           ],
           if (supported && sync.enabled) const SmsAlertsTile(),
+          if (supported && sync.enabled) const BackgroundSyncTile(),
           const SizedBox(height: 14),
           if (supported)
             Row(

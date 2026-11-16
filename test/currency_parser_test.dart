@@ -1,9 +1,9 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:pckt/data/db/tables.dart';
-import 'package:pckt/ingestion/parser/currency_text.dart';
-import 'package:pckt/ingestion/parser/email_parser.dart';
-import 'package:pckt/ingestion/parser/parsed_txn.dart';
-import 'package:pckt/ingestion/parser/sms_parser.dart';
+import 'package:moneytrail/data/db/tables.dart';
+import 'package:moneytrail/ingestion/parser/currency_text.dart';
+import 'package:moneytrail/ingestion/parser/email_parser.dart';
+import 'package:moneytrail/ingestion/parser/parsed_txn.dart';
+import 'package:moneytrail/ingestion/parser/sms_parser.dart';
 
 ParseResult p(String sender, String body, {String home = 'INR'}) => SmsParser(home: home).parse(
   RawInput(

@@ -10,8 +10,8 @@ abstract final class AppTheme {
     surface: Palette.inkRaised,
     surfaceHigh: Palette.inkHigh,
     line: Palette.inkLine,
-    onBg: const Color(0xFFF2F3F5),
-    muted: const Color(0xFF8A8F9C),
+    onBg: const Color(0xFFFAFAFA), // zinc-50
+    muted: const Color(0xFFA1A1AA), // zinc-400
   );
 
   static ThemeData light() => _build(
@@ -20,8 +20,8 @@ abstract final class AppTheme {
     surface: Palette.paperRaised,
     surfaceHigh: Palette.paperHigh,
     line: Palette.paperLine,
-    onBg: const Color(0xFF15171C),
-    muted: const Color(0xFF6B6F78),
+    onBg: const Color(0xFF0F172A), // slate-900
+    muted: const Color(0xFF64748B), // slate-500
   );
 
   static ThemeData _build({
@@ -33,15 +33,18 @@ abstract final class AppTheme {
     required Color onBg,
     required Color muted,
   }) {
+    final dark = brightness == Brightness.dark;
+    final primary = dark ? Palette.brandDark : Palette.brandLight;
+    final onPrimary = dark ? const Color(0xFF0B1220) : Colors.white;
     final scheme = ColorScheme(
       brightness: brightness,
-      primary: Palette.violet,
-      onPrimary: Colors.white,
-      secondary: Palette.mint,
-      onSecondary: const Color(0xFF052E1C),
+      primary: primary,
+      onPrimary: onPrimary,
+      secondary: primary,
+      onSecondary: onPrimary,
       tertiary: Palette.amber,
       onTertiary: Colors.black,
-      error: Palette.coral,
+      error: Palette.red,
       onError: Colors.white,
       surface: bg,
       onSurface: onBg,
@@ -55,7 +58,7 @@ abstract final class AppTheme {
       outlineVariant: line,
     );
 
-    final base = brightness == Brightness.dark ? ThemeData.dark() : ThemeData.light();
+    final base = dark ? ThemeData.dark() : ThemeData.light();
     final body = GoogleFonts.interTextTheme(base.textTheme);
     final display = GoogleFonts.manropeTextTheme(base.textTheme);
     final text = body
@@ -98,7 +101,7 @@ abstract final class AppTheme {
       dividerTheme: DividerThemeData(color: line, space: 1, thickness: 1),
       chipTheme: ChipThemeData(
         backgroundColor: surface,
-        selectedColor: Palette.violet.withValues(alpha: 0.18),
+        selectedColor: Palette.brand.withValues(alpha: 0.18),
         side: BorderSide(color: line),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         labelStyle: text.labelLarge,
@@ -107,7 +110,10 @@ abstract final class AppTheme {
       navigationBarTheme: NavigationBarThemeData(
         backgroundColor: surface,
         surfaceTintColor: Colors.transparent,
-        indicatorColor: Palette.violet.withValues(alpha: 0.2),
+        indicatorColor: Palette.brand.withValues(alpha: 0.2),
+        iconTheme: WidgetStateProperty.resolveWith(
+          (s) => IconThemeData(color: s.contains(WidgetState.selected) ? primary : muted),
+        ),
         height: 68,
         labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
         labelTextStyle: WidgetStateProperty.resolveWith(
@@ -139,8 +145,8 @@ abstract final class AppTheme {
         ),
       ),
       floatingActionButtonTheme: FloatingActionButtonThemeData(
-        backgroundColor: Palette.violet,
-        foregroundColor: Colors.white,
+        backgroundColor: primary,
+        foregroundColor: onPrimary,
         elevation: 0,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
       ),

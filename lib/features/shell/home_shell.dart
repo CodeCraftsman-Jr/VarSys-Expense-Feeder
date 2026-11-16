@@ -6,11 +6,9 @@ import '../../core/theme/icons.dart';
 
 import '../../ingestion/email/email_sync.dart';
 import '../../ingestion/ingestion_service.dart';
-import '../../llm/llm_providers.dart';
 import '../../providers.dart';
-import '../activity/add_transaction_sheet.dart';
+import '../settings/background_sync_setup.dart';
 import 'share_outcome.dart';
-import '../budgets/budget_providers.dart';
 
 class HomeShell extends ConsumerStatefulWidget {
   const HomeShell({super.key, required this.shell});
@@ -32,6 +30,10 @@ class _HomeShellState extends ConsumerState<HomeShell> {
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       await _sync();
       await ref.read(smsAlertsProvider.notifier).ensurePermission();
+      // Background sync needs the battery exemption (and Autostart on Xiaomi): ask for it here.
+      if (mounted && ref.read(smsSyncProvider).enabled) {
+        await askBackgroundSync(context, ref.read(prefsProvider));
+      }
     });
   }
 
@@ -61,54 +63,19 @@ class _HomeShellState extends ConsumerState<HomeShell> {
   @override
   Widget build(BuildContext context) {
     final index = widget.shell.currentIndex;
-    final review = ref.watch(reviewCountProvider).value ?? 0;
-    // Keeps the AI jobs alive so they run after each sync.
-    ref.listen(aiJobsProvider, (_, _) {});
     ref.listen(shareIntakeProvider, (_, outcome) {
       if (outcome != null) showShareOutcome(context, outcome);
     });
-    // Budget alerts watch the DB, so they fire after syncs, adds and edits.
-    ref.listen(budgetAlertsProvider, (_, _) {});
     return Scaffold(
       body: widget.shell,
-      floatingActionButton: index <= 1
-          ? FloatingActionButton(
-              onPressed: () => showAddTransactionSheet(context),
-              tooltip: 'Add transaction',
-              child: const Icon(PhosphorIconsBold.plus),
-            )
-          : null,
       bottomNavigationBar: NavigationBar(
         selectedIndex: index,
         onDestinationSelected: (i) => widget.shell.goBranch(i, initialLocation: i == index),
         destinations: [
           const NavigationDestination(
-            icon: Icon(PhosphorIconsRegular.house),
-            selectedIcon: Icon(PhosphorIconsFill.house),
-            label: 'Home',
-          ),
-          NavigationDestination(
-            icon: Badge(
-              isLabelVisible: review > 0,
-              label: Text('$review'),
-              child: const Icon(PhosphorIconsRegular.listBullets),
-            ),
-            selectedIcon: Badge(
-              isLabelVisible: review > 0,
-              label: Text('$review'),
-              child: const Icon(PhosphorIconsFill.listBullets),
-            ),
+            icon: Icon(PhosphorIconsRegular.listBullets),
+            selectedIcon: Icon(PhosphorIconsFill.listBullets),
             label: 'Activity',
-          ),
-          const NavigationDestination(
-            icon: Icon(PhosphorIconsRegular.chartPie),
-            selectedIcon: Icon(PhosphorIconsFill.chartPie),
-            label: 'Insights',
-          ),
-          const NavigationDestination(
-            icon: Icon(PhosphorIconsRegular.sparkle),
-            selectedIcon: Icon(PhosphorIconsFill.sparkle),
-            label: 'Ask',
           ),
           const NavigationDestination(
             icon: Icon(PhosphorIconsRegular.gearSix),

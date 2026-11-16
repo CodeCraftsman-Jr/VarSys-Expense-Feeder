@@ -16,7 +16,7 @@ val keystoreProperties = Properties().apply {
 val hasReleaseKey = keystorePropertiesFile.exists()
 
 android {
-    namespace = "com.pckt.pckt"
+    namespace = "com.varsys.moneytrail"
     compileSdk = flutter.compileSdkVersion
     ndkVersion = flutter.ndkVersion
 
@@ -29,7 +29,7 @@ android {
 
     defaultConfig {
         // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
-        applicationId = "com.pckt.pckt"
+        applicationId = "com.varsys.moneytrail"
         // You can update the following values to match your application needs.
         // For more information, see: https://flutter.dev/to/review-gradle-config.
         // LiteRT-LM (on-device models) needs Android 11+.
@@ -77,5 +77,7 @@ flutter {
 dependencies {
     // NotificationCompat for SMS transaction alerts (SmsAlertReceiver).
     implementation("androidx.core:core:1.13.1")
+    // Background SMS import and Joint Journey sync (SyncWorker); same version background_downloader uses.
+    implementation("androidx.work:work-runtime-ktx:2.11.0")
     coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.4")
 }

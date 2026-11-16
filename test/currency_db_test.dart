@@ -1,4 +1,3 @@
-import 'dart:convert';
 import 'dart:io';
 import 'dart:ui' show PlatformDispatcher;
 
@@ -6,17 +5,11 @@ import 'package:drift/drift.dart' hide isNull, isNotNull;
 import 'package:drift/native.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:pckt/core/currency.dart';
-import 'package:pckt/data/backup/data_export.dart';
-import 'package:pckt/data/db/database.dart';
-import 'package:pckt/features/budgets/budget_math.dart';
-import 'package:pckt/features/stats.dart';
-import 'package:pckt/ingestion/ingestion_service.dart';
-import 'package:pckt/ingestion/parser/parsed_txn.dart';
-import 'package:pckt/llm/agent/finance_agent.dart';
-import 'package:pckt/llm/agent/finance_tools.dart';
-import 'package:pckt/llm/llm_client.dart';
-import 'package:pckt/providers.dart';
+import 'package:moneytrail/core/currency.dart';
+import 'package:moneytrail/data/db/database.dart';
+import 'package:moneytrail/ingestion/ingestion_service.dart';
+import 'package:moneytrail/ingestion/parser/parsed_txn.dart';
+import 'package:moneytrail/providers.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 AppDatabase memoryDb() => AppDatabase(DatabaseConnection(NativeDatabase.memory()));
@@ -64,7 +57,8 @@ void main() {
       expect((t.amountMinor, t.currency, t.convertedMinor, t.convertedCurrency), (25000, 'INR', null, null));
       expect((await db.allAccounts()).single.currency, 'INR');
       expect((await db.allBudgets()).single.currency, 'INR');
-      expect(await db.customSelect('PRAGMA user_version').map((r) => r.data.values.first).getSingle(), 4);
+      expect(await db.customSelect('PRAGMA user_version').map((r) => r.data.values.first).getSingle(), db.schemaVersion);
+      expect(await db.select(db.feedUploads).get(), isEmpty, reason: 'v5 table created on upgrade');
       await db.close();
     } finally {
       await dir.delete(recursive: true);
@@ -88,13 +82,15 @@ void main() {
       expect(usd.isForeign, isTrue);
       expect(views.firstWhere((v) => v.txn.currency == 'INR').account?.currency, 'INR');
 
-      var stats = MonthStats(views, DateTime(2026, 10));
-      expect((stats.spent, stats.unconverted), (25000, 1));
+      // A foreign payment has no rupee amount yet, so it adds nothing to rupee totals.
+      int homeSpent(Iterable<dynamic> vs) => vs
+          .where((v) => v.txn.direction == TxnDirection.debit && !v.txn.isTransfer)
+          .fold(0, (sum, v) => sum + ((v.txn as Transaction).homeMinor ?? 0));
+      expect(homeSpent(views), 25000);
 
       // The user enters what the bank charged; now it counts.
       await db.setConversion(usd.id, minor: 104530, currency: 'INR');
-      stats = MonthStats(await db.watchTxns().first, DateTime(2026, 10));
-      expect((stats.spent, stats.unconverted), (25000 + 104530, 0));
+      expect(homeSpent(await db.watchTxns().first), 25000 + 104530);
     });
 
     test('a stated equivalent counts at once, and a rupee-only alert for it is found by dedup', () async {
@@ -183,111 +179,6 @@ void main() {
     });
   });
 
-  test('assistant tools total in the home currency and flag foreign rows', () async {
-    final db = memoryDb();
-    addTearDown(db.close);
-    await db.addManual(amountMinor: 25000, direction: TxnDirection.debit, at: t0, merchant: 'Swiggy');
-    await db.addManual(amountMinor: 1250, currency: 'USD', direction: TxnDirection.debit, at: t0, merchant: 'AWS');
-    await db.addManual(
-      amountMinor: 999,
-      currency: 'USD',
-      convertedMinor: 83000,
-      direction: TxnDirection.debit,
-      at: t0,
-      merchant: 'Netflix',
-    );
-    final tools = FinanceTools(db, now: () => t0);
-    final q = (await tools.queryTransactions({'from': '2026-10-01', 'to': '2026-10-31'})).json;
-    expect(q['currency'], 'INR');
-    expect(q['total_debit'], 250 + 830);
-    expect(q['total_debit_formatted'], '₹1,080');
-    expect(q['not_in_totals'], 1);
-    final rows = {for (final r in (q['transactions'] as List).cast<Map<String, dynamic>>()) r['merchant']: r};
-    expect(rows['Swiggy']!.containsKey('currency'), isFalse);
-    expect((rows['AWS']!['amount'], rows['AWS']!['currency'], rows['AWS']!['in_totals']), (12.5, 'USD', false));
-    expect((rows['Netflix']!['currency'], rows['Netflix']!['home_amount']), ('USD', 830.0));
-    final s = (await tools.spendingSummary({'from': '2026-10-01', 'to': '2026-10-31', 'group_by': 'merchant'})).json;
-    expect((s['total'], s['not_in_totals']), (1080.0, 1));
-    expect(
-      FinanceAgent(client: _NoClient(), tools: tools, now: () => t0).systemPrompt(),
-      contains('Indian Rupee (INR)'),
-    );
-    Currencies.home = 'AED';
-    expect(FinanceAgent(client: _NoClient(), tools: tools, now: () => t0).systemPrompt(), isNot(contains('₹')));
-  });
-
-  test('budgets only apply in the currency they were set in', () async {
-    final b = Budget(id: 1, categoryId: null, amountMinor: 1000000, currency: 'INR', active: true, createdAt: t0);
-    List<BudgetProgress> run() =>
-        budgetProgress(budgets: [b], txns: const [], categories: const [], month: DateTime(2026, 10), now: t0);
-    expect(run(), hasLength(1));
-    Currencies.home = 'USD';
-    expect(run(), isEmpty);
-  });
-
-  group('backup', () {
-    late AppDatabase db;
-    setUp(() async {
-      db = memoryDb();
-      await IngestionService(db).ingest([
-        sms(
-          'JD-SBICRD-S',
-          'Transaction of USD 12.50 (INR 1,045.30) done on your SBI Card ending 5678 at NETFLIX.COM on 12/10/26.',
-          t0,
-        ),
-      ]);
-      await db.addManual(amountMinor: 1200, currency: 'JPY', direction: TxnDirection.debit, at: t0, merchant: 'Lawson');
-      await db.addAccount(name: 'Wise USD', kind: AccountKind.wallet, color: 1, currency: 'USD');
-      await db.setBudget(amountMinor: 50000, currency: 'INR');
-    });
-    tearDown(() => db.close());
-
-    test('round-trips currencies exactly', () async {
-      final json = await DataExport(db).backupJson();
-      final fresh = memoryDb();
-      addTearDown(fresh.close);
-      await DataExport(fresh).restore(json);
-      expect(await dump(fresh), await dump(db));
-      final txns = await fresh.select(fresh.transactions).get();
-      expect(txns.map((t) => t.currency).toSet(), {'USD', 'JPY'});
-    });
-
-    test('a v1.0 (schema 3) backup restores with everything in INR', () async {
-      final m = jsonDecode(await DataExport(db).backupJson()) as Map<String, Object?>;
-      m['schemaVersion'] = 3;
-      final tables = (m['tables']! as Map).cast<String, Object?>();
-      for (final name in ['transactions', 'accounts', 'budgets']) {
-        for (final row in (tables[name]! as List).cast<Map<String, Object?>>()) {
-          row
-            ..remove('currency')
-            ..remove('converted_minor')
-            ..remove('converted_currency');
-        }
-      }
-      final fresh = memoryDb();
-      addTearDown(fresh.close);
-      final summary = await DataExport(fresh).restore(jsonEncode(m));
-      expect(summary.schemaVersion, 3);
-      final txns = await fresh.select(fresh.transactions).get();
-      expect(txns, hasLength(2));
-      expect(txns.every((t) => t.currency == 'INR' && t.convertedMinor == null), isTrue);
-      expect((await fresh.allAccounts()).every((a) => a.currency == 'INR'), isTrue);
-      expect((await fresh.allBudgets()).single.currency, 'INR');
-    });
-
-    test('CSV has the currency columns, with per-currency decimals', () async {
-      final rows = decodeCsv(await DataExport(db).transactionsCsv());
-      final h = rows.first;
-      expect(h.sublist(h.length - 3), ['currency', 'converted_amount', 'converted_currency']);
-      final byCurrency = {for (final r in rows.skip(1)) r[h.indexOf('currency')]: r};
-      expect(byCurrency['USD']![1], '12.50');
-      expect(byCurrency['USD']![h.indexOf('converted_amount')], '1045.30');
-      expect(byCurrency['USD']![h.indexOf('converted_currency')], 'INR');
-      expect(byCurrency['JPY']![1], '1200');
-      expect(byCurrency['JPY']![h.indexOf('converted_amount')], '');
-    });
-  });
-
   group('home currency setting', () {
     Future<ProviderContainer> container(Map<String, Object> prefs) async {
       SharedPreferences.setMockInitialValues(prefs);
@@ -321,7 +212,3 @@ void main() {
   });
 }
 
-class _NoClient implements LlmClient {
-  @override
-  dynamic noSuchMethod(Invocation invocation) => throw UnimplementedError();
-}

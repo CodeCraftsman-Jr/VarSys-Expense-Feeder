@@ -25,7 +25,7 @@ flutter test
 - Bump `smsParserVersion` when a parser change should re-read existing SMS.
 - Keep data on the device. Nothing may leave the phone unless the user connected an LLM and switched
   on the feature that sends it (see *Privacy* in the README).
-- Icons come from `tool/gen_icons.js`, and brand assets from `tool/gen_brand_assets.js`. Edit the
+- Icons come from `tool/gen_icons.js`, and brand assets from `tool/gen_brand_assets.py`. Edit the
   generators, not their output.
 
 By contributing you agree that your contribution is licensed under GPL-3.0.

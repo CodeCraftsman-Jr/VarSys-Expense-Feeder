@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../account/account_providers.dart';
 import '../../core/theme/icons.dart';
 
 import '../../core/format.dart';
@@ -38,7 +39,7 @@ class _ActivityScreenState extends ConsumerState<ActivityScreen> {
       ActivityFilter.all => true,
       ActivityFilter.spent => t.direction == TxnDirection.debit && !t.isTransfer,
       ActivityFilter.received => t.direction == TxnDirection.credit && !t.isTransfer,
-      ActivityFilter.review => t.status == TxnStatus.needsReview,
+      ActivityFilter.review => true,
       ActivityFilter.transfers => t.isTransfer,
       ActivityFilter.foreign => t.isForeign,
     };
@@ -58,6 +59,10 @@ class _ActivityScreenState extends ConsumerState<ActivityScreen> {
   @override
   Widget build(BuildContext context) {
     final txns = ref.watch(allTxnsProvider);
+    final teamId = ref.watch(accountProvider.select((state) => state.profile?.teamId));
+    final feedUploads = teamId == null
+        ? const <int, FeedUploadSummary>{}
+        : ref.watch(feedUploadSummariesProvider(teamId)).value ?? const <int, FeedUploadSummary>{};
     final anyForeign = _filter == ActivityFilter.foreign || (txns.value?.any((v) => v.txn.isForeign) ?? false);
     return Scaffold(
       body: SafeArea(
@@ -85,7 +90,7 @@ class _ActivityScreenState extends ConsumerState<ActivityScreen> {
                 padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
                 children: [
                   for (final f in ActivityFilter.values)
-                    if (f != ActivityFilter.foreign || anyForeign)
+                    if (f != ActivityFilter.review && (f != ActivityFilter.foreign || anyForeign))
                       Padding(
                         padding: const EdgeInsets.only(right: 8),
                         child: ChoiceChip(
@@ -114,18 +119,14 @@ class _ActivityScreenState extends ConsumerState<ActivityScreen> {
                     return ListView(
                       children: [
                         EmptyState(
-                          icon: _filter == ActivityFilter.review
-                              ? PhosphorIconsFill.checkCircle
-                              : PhosphorIconsFill.receipt,
-                          title: _filter == ActivityFilter.review ? 'All clear' : 'No transactions',
-                          message: _filter == ActivityFilter.review
-                              ? 'Nothing needs your attention right now.'
-                              : 'Try a different filter or search.',
+                          icon: PhosphorIconsFill.receipt,
+                          title: 'No transactions',
+                          message: 'Try a different filter or search.',
                         ),
                       ],
                     );
                   }
-                  return _GroupedList(list: list);
+                  return _GroupedList(list: list, feedUploads: feedUploads);
                 },
               ),
             ),
@@ -137,8 +138,9 @@ class _ActivityScreenState extends ConsumerState<ActivityScreen> {
 }
 
 class _GroupedList extends StatelessWidget {
-  const _GroupedList({required this.list});
+  const _GroupedList({required this.list, required this.feedUploads});
   final List<TxnView> list;
+  final Map<int, FeedUploadSummary> feedUploads;
 
   @override
   Widget build(BuildContext context) {
@@ -189,7 +191,11 @@ class _GroupedList extends StatelessWidget {
           );
         }
         final v = item as TxnView;
-        return TransactionTile(view: v, onTap: () => showTransactionSheet(context, v.txn.id));
+        return TransactionTile(
+          view: v,
+          feedUpload: feedUploads[v.txn.id],
+          onTap: () => showTransactionSheet(context, v.txn.id),
+        );
       },
     );
   }

@@ -3430,6 +3430,820 @@ class BudgetsCompanion extends UpdateCompanion<Budget> {
   }
 }
 
+class $FeedUploadsTable extends FeedUploads
+    with TableInfo<$FeedUploadsTable, FeedUpload> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $FeedUploadsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _teamIdMeta = const VerificationMeta('teamId');
+  @override
+  late final GeneratedColumn<String> teamId = GeneratedColumn<String>(
+    'team_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _clientMessageIdMeta = const VerificationMeta(
+    'clientMessageId',
+  );
+  @override
+  late final GeneratedColumn<String> clientMessageId = GeneratedColumn<String>(
+    'client_message_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _transactionIdMeta = const VerificationMeta(
+    'transactionId',
+  );
+  @override
+  late final GeneratedColumn<int> transactionId = GeneratedColumn<int>(
+    'transaction_id',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _statusMeta = const VerificationMeta('status');
+  @override
+  late final GeneratedColumn<String> status = GeneratedColumn<String>(
+    'status',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _reasonMeta = const VerificationMeta('reason');
+  @override
+  late final GeneratedColumn<String> reason = GeneratedColumn<String>(
+    'reason',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _serverIdMeta = const VerificationMeta(
+    'serverId',
+  );
+  @override
+  late final GeneratedColumn<int> serverId = GeneratedColumn<int>(
+    'server_id',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _appVersionMeta = const VerificationMeta(
+    'appVersion',
+  );
+  @override
+  late final GeneratedColumn<String> appVersion = GeneratedColumn<String>(
+    'app_version',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _uploadedAtMeta = const VerificationMeta(
+    'uploadedAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> uploadedAt = GeneratedColumn<DateTime>(
+    'uploaded_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _payloadJsonMeta = const VerificationMeta(
+    'payloadJson',
+  );
+  @override
+  late final GeneratedColumn<String> payloadJson = GeneratedColumn<String>(
+    'payload_json',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _reviewStateMeta = const VerificationMeta(
+    'reviewState',
+  );
+  @override
+  late final GeneratedColumn<String> reviewState = GeneratedColumn<String>(
+    'review_state',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant('pending'),
+  );
+  static const VerificationMeta _decidedCategoryMeta = const VerificationMeta(
+    'decidedCategory',
+  );
+  @override
+  late final GeneratedColumn<String> decidedCategory = GeneratedColumn<String>(
+    'decided_category',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _decidedSubCategoryMeta =
+      const VerificationMeta('decidedSubCategory');
+  @override
+  late final GeneratedColumn<String> decidedSubCategory =
+      GeneratedColumn<String>(
+        'decided_sub_category',
+        aliasedName,
+        true,
+        type: DriftSqlType.string,
+        requiredDuringInsert: false,
+      );
+  static const VerificationMeta _decidedAtMeta = const VerificationMeta(
+    'decidedAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> decidedAt = GeneratedColumn<DateTime>(
+    'decided_at',
+    aliasedName,
+    true,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: false,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    teamId,
+    clientMessageId,
+    transactionId,
+    status,
+    reason,
+    serverId,
+    appVersion,
+    uploadedAt,
+    payloadJson,
+    reviewState,
+    decidedCategory,
+    decidedSubCategory,
+    decidedAt,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'feed_uploads';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<FeedUpload> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('team_id')) {
+      context.handle(
+        _teamIdMeta,
+        teamId.isAcceptableOrUnknown(data['team_id']!, _teamIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_teamIdMeta);
+    }
+    if (data.containsKey('client_message_id')) {
+      context.handle(
+        _clientMessageIdMeta,
+        clientMessageId.isAcceptableOrUnknown(
+          data['client_message_id']!,
+          _clientMessageIdMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_clientMessageIdMeta);
+    }
+    if (data.containsKey('transaction_id')) {
+      context.handle(
+        _transactionIdMeta,
+        transactionId.isAcceptableOrUnknown(
+          data['transaction_id']!,
+          _transactionIdMeta,
+        ),
+      );
+    }
+    if (data.containsKey('status')) {
+      context.handle(
+        _statusMeta,
+        status.isAcceptableOrUnknown(data['status']!, _statusMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_statusMeta);
+    }
+    if (data.containsKey('reason')) {
+      context.handle(
+        _reasonMeta,
+        reason.isAcceptableOrUnknown(data['reason']!, _reasonMeta),
+      );
+    }
+    if (data.containsKey('server_id')) {
+      context.handle(
+        _serverIdMeta,
+        serverId.isAcceptableOrUnknown(data['server_id']!, _serverIdMeta),
+      );
+    }
+    if (data.containsKey('app_version')) {
+      context.handle(
+        _appVersionMeta,
+        appVersion.isAcceptableOrUnknown(data['app_version']!, _appVersionMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_appVersionMeta);
+    }
+    if (data.containsKey('uploaded_at')) {
+      context.handle(
+        _uploadedAtMeta,
+        uploadedAt.isAcceptableOrUnknown(data['uploaded_at']!, _uploadedAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_uploadedAtMeta);
+    }
+    if (data.containsKey('payload_json')) {
+      context.handle(
+        _payloadJsonMeta,
+        payloadJson.isAcceptableOrUnknown(
+          data['payload_json']!,
+          _payloadJsonMeta,
+        ),
+      );
+    }
+    if (data.containsKey('review_state')) {
+      context.handle(
+        _reviewStateMeta,
+        reviewState.isAcceptableOrUnknown(
+          data['review_state']!,
+          _reviewStateMeta,
+        ),
+      );
+    }
+    if (data.containsKey('decided_category')) {
+      context.handle(
+        _decidedCategoryMeta,
+        decidedCategory.isAcceptableOrUnknown(
+          data['decided_category']!,
+          _decidedCategoryMeta,
+        ),
+      );
+    }
+    if (data.containsKey('decided_sub_category')) {
+      context.handle(
+        _decidedSubCategoryMeta,
+        decidedSubCategory.isAcceptableOrUnknown(
+          data['decided_sub_category']!,
+          _decidedSubCategoryMeta,
+        ),
+      );
+    }
+    if (data.containsKey('decided_at')) {
+      context.handle(
+        _decidedAtMeta,
+        decidedAt.isAcceptableOrUnknown(data['decided_at']!, _decidedAtMeta),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {teamId, clientMessageId};
+  @override
+  FeedUpload map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return FeedUpload(
+      teamId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}team_id'],
+      )!,
+      clientMessageId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}client_message_id'],
+      )!,
+      transactionId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}transaction_id'],
+      ),
+      status: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}status'],
+      )!,
+      reason: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}reason'],
+      ),
+      serverId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}server_id'],
+      ),
+      appVersion: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}app_version'],
+      )!,
+      uploadedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}uploaded_at'],
+      )!,
+      payloadJson: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}payload_json'],
+      ),
+      reviewState: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}review_state'],
+      )!,
+      decidedCategory: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}decided_category'],
+      ),
+      decidedSubCategory: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}decided_sub_category'],
+      ),
+      decidedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}decided_at'],
+      ),
+    );
+  }
+
+  @override
+  $FeedUploadsTable createAlias(String alias) {
+    return $FeedUploadsTable(attachedDatabase, alias);
+  }
+}
+
+class FeedUpload extends DataClass implements Insertable<FeedUpload> {
+  final String teamId;
+
+  /// sha256 of the install id and the source message ids (see FeedOutbox).
+  final String clientMessageId;
+
+  /// The transaction it was built from; informational, not a foreign key.
+  final int? transactionId;
+
+  /// accepted, already_received, rejected or client_outdated.
+  final String status;
+  final String? reason;
+  final int? serverId;
+
+  /// App version that sent it: rejected and outdated rows are retried after
+  /// an update.
+  final String appVersion;
+  final DateTime uploadedAt;
+
+  /// Exact row object included in the request, stored in encrypted local DB.
+  final String? payloadJson;
+
+  /// What the team decided on the web, read back from the server (v7). The phone never decides:
+  /// pending (waiting), confirmed (reviewed, still waiting), added or linked (in the ledger),
+  /// transfer or ignored (kept out of it).
+  final String reviewState;
+  final String? decidedCategory;
+  final String? decidedSubCategory;
+  final DateTime? decidedAt;
+  const FeedUpload({
+    required this.teamId,
+    required this.clientMessageId,
+    this.transactionId,
+    required this.status,
+    this.reason,
+    this.serverId,
+    required this.appVersion,
+    required this.uploadedAt,
+    this.payloadJson,
+    required this.reviewState,
+    this.decidedCategory,
+    this.decidedSubCategory,
+    this.decidedAt,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['team_id'] = Variable<String>(teamId);
+    map['client_message_id'] = Variable<String>(clientMessageId);
+    if (!nullToAbsent || transactionId != null) {
+      map['transaction_id'] = Variable<int>(transactionId);
+    }
+    map['status'] = Variable<String>(status);
+    if (!nullToAbsent || reason != null) {
+      map['reason'] = Variable<String>(reason);
+    }
+    if (!nullToAbsent || serverId != null) {
+      map['server_id'] = Variable<int>(serverId);
+    }
+    map['app_version'] = Variable<String>(appVersion);
+    map['uploaded_at'] = Variable<DateTime>(uploadedAt);
+    if (!nullToAbsent || payloadJson != null) {
+      map['payload_json'] = Variable<String>(payloadJson);
+    }
+    map['review_state'] = Variable<String>(reviewState);
+    if (!nullToAbsent || decidedCategory != null) {
+      map['decided_category'] = Variable<String>(decidedCategory);
+    }
+    if (!nullToAbsent || decidedSubCategory != null) {
+      map['decided_sub_category'] = Variable<String>(decidedSubCategory);
+    }
+    if (!nullToAbsent || decidedAt != null) {
+      map['decided_at'] = Variable<DateTime>(decidedAt);
+    }
+    return map;
+  }
+
+  FeedUploadsCompanion toCompanion(bool nullToAbsent) {
+    return FeedUploadsCompanion(
+      teamId: Value(teamId),
+      clientMessageId: Value(clientMessageId),
+      transactionId: transactionId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(transactionId),
+      status: Value(status),
+      reason: reason == null && nullToAbsent
+          ? const Value.absent()
+          : Value(reason),
+      serverId: serverId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(serverId),
+      appVersion: Value(appVersion),
+      uploadedAt: Value(uploadedAt),
+      payloadJson: payloadJson == null && nullToAbsent
+          ? const Value.absent()
+          : Value(payloadJson),
+      reviewState: Value(reviewState),
+      decidedCategory: decidedCategory == null && nullToAbsent
+          ? const Value.absent()
+          : Value(decidedCategory),
+      decidedSubCategory: decidedSubCategory == null && nullToAbsent
+          ? const Value.absent()
+          : Value(decidedSubCategory),
+      decidedAt: decidedAt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(decidedAt),
+    );
+  }
+
+  factory FeedUpload.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return FeedUpload(
+      teamId: serializer.fromJson<String>(json['teamId']),
+      clientMessageId: serializer.fromJson<String>(json['clientMessageId']),
+      transactionId: serializer.fromJson<int?>(json['transactionId']),
+      status: serializer.fromJson<String>(json['status']),
+      reason: serializer.fromJson<String?>(json['reason']),
+      serverId: serializer.fromJson<int?>(json['serverId']),
+      appVersion: serializer.fromJson<String>(json['appVersion']),
+      uploadedAt: serializer.fromJson<DateTime>(json['uploadedAt']),
+      payloadJson: serializer.fromJson<String?>(json['payloadJson']),
+      reviewState: serializer.fromJson<String>(json['reviewState']),
+      decidedCategory: serializer.fromJson<String?>(json['decidedCategory']),
+      decidedSubCategory: serializer.fromJson<String?>(
+        json['decidedSubCategory'],
+      ),
+      decidedAt: serializer.fromJson<DateTime?>(json['decidedAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'teamId': serializer.toJson<String>(teamId),
+      'clientMessageId': serializer.toJson<String>(clientMessageId),
+      'transactionId': serializer.toJson<int?>(transactionId),
+      'status': serializer.toJson<String>(status),
+      'reason': serializer.toJson<String?>(reason),
+      'serverId': serializer.toJson<int?>(serverId),
+      'appVersion': serializer.toJson<String>(appVersion),
+      'uploadedAt': serializer.toJson<DateTime>(uploadedAt),
+      'payloadJson': serializer.toJson<String?>(payloadJson),
+      'reviewState': serializer.toJson<String>(reviewState),
+      'decidedCategory': serializer.toJson<String?>(decidedCategory),
+      'decidedSubCategory': serializer.toJson<String?>(decidedSubCategory),
+      'decidedAt': serializer.toJson<DateTime?>(decidedAt),
+    };
+  }
+
+  FeedUpload copyWith({
+    String? teamId,
+    String? clientMessageId,
+    Value<int?> transactionId = const Value.absent(),
+    String? status,
+    Value<String?> reason = const Value.absent(),
+    Value<int?> serverId = const Value.absent(),
+    String? appVersion,
+    DateTime? uploadedAt,
+    Value<String?> payloadJson = const Value.absent(),
+    String? reviewState,
+    Value<String?> decidedCategory = const Value.absent(),
+    Value<String?> decidedSubCategory = const Value.absent(),
+    Value<DateTime?> decidedAt = const Value.absent(),
+  }) => FeedUpload(
+    teamId: teamId ?? this.teamId,
+    clientMessageId: clientMessageId ?? this.clientMessageId,
+    transactionId: transactionId.present
+        ? transactionId.value
+        : this.transactionId,
+    status: status ?? this.status,
+    reason: reason.present ? reason.value : this.reason,
+    serverId: serverId.present ? serverId.value : this.serverId,
+    appVersion: appVersion ?? this.appVersion,
+    uploadedAt: uploadedAt ?? this.uploadedAt,
+    payloadJson: payloadJson.present ? payloadJson.value : this.payloadJson,
+    reviewState: reviewState ?? this.reviewState,
+    decidedCategory: decidedCategory.present
+        ? decidedCategory.value
+        : this.decidedCategory,
+    decidedSubCategory: decidedSubCategory.present
+        ? decidedSubCategory.value
+        : this.decidedSubCategory,
+    decidedAt: decidedAt.present ? decidedAt.value : this.decidedAt,
+  );
+  FeedUpload copyWithCompanion(FeedUploadsCompanion data) {
+    return FeedUpload(
+      teamId: data.teamId.present ? data.teamId.value : this.teamId,
+      clientMessageId: data.clientMessageId.present
+          ? data.clientMessageId.value
+          : this.clientMessageId,
+      transactionId: data.transactionId.present
+          ? data.transactionId.value
+          : this.transactionId,
+      status: data.status.present ? data.status.value : this.status,
+      reason: data.reason.present ? data.reason.value : this.reason,
+      serverId: data.serverId.present ? data.serverId.value : this.serverId,
+      appVersion: data.appVersion.present
+          ? data.appVersion.value
+          : this.appVersion,
+      uploadedAt: data.uploadedAt.present
+          ? data.uploadedAt.value
+          : this.uploadedAt,
+      payloadJson: data.payloadJson.present
+          ? data.payloadJson.value
+          : this.payloadJson,
+      reviewState: data.reviewState.present
+          ? data.reviewState.value
+          : this.reviewState,
+      decidedCategory: data.decidedCategory.present
+          ? data.decidedCategory.value
+          : this.decidedCategory,
+      decidedSubCategory: data.decidedSubCategory.present
+          ? data.decidedSubCategory.value
+          : this.decidedSubCategory,
+      decidedAt: data.decidedAt.present ? data.decidedAt.value : this.decidedAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('FeedUpload(')
+          ..write('teamId: $teamId, ')
+          ..write('clientMessageId: $clientMessageId, ')
+          ..write('transactionId: $transactionId, ')
+          ..write('status: $status, ')
+          ..write('reason: $reason, ')
+          ..write('serverId: $serverId, ')
+          ..write('appVersion: $appVersion, ')
+          ..write('uploadedAt: $uploadedAt, ')
+          ..write('payloadJson: $payloadJson, ')
+          ..write('reviewState: $reviewState, ')
+          ..write('decidedCategory: $decidedCategory, ')
+          ..write('decidedSubCategory: $decidedSubCategory, ')
+          ..write('decidedAt: $decidedAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    teamId,
+    clientMessageId,
+    transactionId,
+    status,
+    reason,
+    serverId,
+    appVersion,
+    uploadedAt,
+    payloadJson,
+    reviewState,
+    decidedCategory,
+    decidedSubCategory,
+    decidedAt,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is FeedUpload &&
+          other.teamId == this.teamId &&
+          other.clientMessageId == this.clientMessageId &&
+          other.transactionId == this.transactionId &&
+          other.status == this.status &&
+          other.reason == this.reason &&
+          other.serverId == this.serverId &&
+          other.appVersion == this.appVersion &&
+          other.uploadedAt == this.uploadedAt &&
+          other.payloadJson == this.payloadJson &&
+          other.reviewState == this.reviewState &&
+          other.decidedCategory == this.decidedCategory &&
+          other.decidedSubCategory == this.decidedSubCategory &&
+          other.decidedAt == this.decidedAt);
+}
+
+class FeedUploadsCompanion extends UpdateCompanion<FeedUpload> {
+  final Value<String> teamId;
+  final Value<String> clientMessageId;
+  final Value<int?> transactionId;
+  final Value<String> status;
+  final Value<String?> reason;
+  final Value<int?> serverId;
+  final Value<String> appVersion;
+  final Value<DateTime> uploadedAt;
+  final Value<String?> payloadJson;
+  final Value<String> reviewState;
+  final Value<String?> decidedCategory;
+  final Value<String?> decidedSubCategory;
+  final Value<DateTime?> decidedAt;
+  final Value<int> rowid;
+  const FeedUploadsCompanion({
+    this.teamId = const Value.absent(),
+    this.clientMessageId = const Value.absent(),
+    this.transactionId = const Value.absent(),
+    this.status = const Value.absent(),
+    this.reason = const Value.absent(),
+    this.serverId = const Value.absent(),
+    this.appVersion = const Value.absent(),
+    this.uploadedAt = const Value.absent(),
+    this.payloadJson = const Value.absent(),
+    this.reviewState = const Value.absent(),
+    this.decidedCategory = const Value.absent(),
+    this.decidedSubCategory = const Value.absent(),
+    this.decidedAt = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  FeedUploadsCompanion.insert({
+    required String teamId,
+    required String clientMessageId,
+    this.transactionId = const Value.absent(),
+    required String status,
+    this.reason = const Value.absent(),
+    this.serverId = const Value.absent(),
+    required String appVersion,
+    required DateTime uploadedAt,
+    this.payloadJson = const Value.absent(),
+    this.reviewState = const Value.absent(),
+    this.decidedCategory = const Value.absent(),
+    this.decidedSubCategory = const Value.absent(),
+    this.decidedAt = const Value.absent(),
+    this.rowid = const Value.absent(),
+  }) : teamId = Value(teamId),
+       clientMessageId = Value(clientMessageId),
+       status = Value(status),
+       appVersion = Value(appVersion),
+       uploadedAt = Value(uploadedAt);
+  static Insertable<FeedUpload> custom({
+    Expression<String>? teamId,
+    Expression<String>? clientMessageId,
+    Expression<int>? transactionId,
+    Expression<String>? status,
+    Expression<String>? reason,
+    Expression<int>? serverId,
+    Expression<String>? appVersion,
+    Expression<DateTime>? uploadedAt,
+    Expression<String>? payloadJson,
+    Expression<String>? reviewState,
+    Expression<String>? decidedCategory,
+    Expression<String>? decidedSubCategory,
+    Expression<DateTime>? decidedAt,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (teamId != null) 'team_id': teamId,
+      if (clientMessageId != null) 'client_message_id': clientMessageId,
+      if (transactionId != null) 'transaction_id': transactionId,
+      if (status != null) 'status': status,
+      if (reason != null) 'reason': reason,
+      if (serverId != null) 'server_id': serverId,
+      if (appVersion != null) 'app_version': appVersion,
+      if (uploadedAt != null) 'uploaded_at': uploadedAt,
+      if (payloadJson != null) 'payload_json': payloadJson,
+      if (reviewState != null) 'review_state': reviewState,
+      if (decidedCategory != null) 'decided_category': decidedCategory,
+      if (decidedSubCategory != null)
+        'decided_sub_category': decidedSubCategory,
+      if (decidedAt != null) 'decided_at': decidedAt,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  FeedUploadsCompanion copyWith({
+    Value<String>? teamId,
+    Value<String>? clientMessageId,
+    Value<int?>? transactionId,
+    Value<String>? status,
+    Value<String?>? reason,
+    Value<int?>? serverId,
+    Value<String>? appVersion,
+    Value<DateTime>? uploadedAt,
+    Value<String?>? payloadJson,
+    Value<String>? reviewState,
+    Value<String?>? decidedCategory,
+    Value<String?>? decidedSubCategory,
+    Value<DateTime?>? decidedAt,
+    Value<int>? rowid,
+  }) {
+    return FeedUploadsCompanion(
+      teamId: teamId ?? this.teamId,
+      clientMessageId: clientMessageId ?? this.clientMessageId,
+      transactionId: transactionId ?? this.transactionId,
+      status: status ?? this.status,
+      reason: reason ?? this.reason,
+      serverId: serverId ?? this.serverId,
+      appVersion: appVersion ?? this.appVersion,
+      uploadedAt: uploadedAt ?? this.uploadedAt,
+      payloadJson: payloadJson ?? this.payloadJson,
+      reviewState: reviewState ?? this.reviewState,
+      decidedCategory: decidedCategory ?? this.decidedCategory,
+      decidedSubCategory: decidedSubCategory ?? this.decidedSubCategory,
+      decidedAt: decidedAt ?? this.decidedAt,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (teamId.present) {
+      map['team_id'] = Variable<String>(teamId.value);
+    }
+    if (clientMessageId.present) {
+      map['client_message_id'] = Variable<String>(clientMessageId.value);
+    }
+    if (transactionId.present) {
+      map['transaction_id'] = Variable<int>(transactionId.value);
+    }
+    if (status.present) {
+      map['status'] = Variable<String>(status.value);
+    }
+    if (reason.present) {
+      map['reason'] = Variable<String>(reason.value);
+    }
+    if (serverId.present) {
+      map['server_id'] = Variable<int>(serverId.value);
+    }
+    if (appVersion.present) {
+      map['app_version'] = Variable<String>(appVersion.value);
+    }
+    if (uploadedAt.present) {
+      map['uploaded_at'] = Variable<DateTime>(uploadedAt.value);
+    }
+    if (payloadJson.present) {
+      map['payload_json'] = Variable<String>(payloadJson.value);
+    }
+    if (reviewState.present) {
+      map['review_state'] = Variable<String>(reviewState.value);
+    }
+    if (decidedCategory.present) {
+      map['decided_category'] = Variable<String>(decidedCategory.value);
+    }
+    if (decidedSubCategory.present) {
+      map['decided_sub_category'] = Variable<String>(decidedSubCategory.value);
+    }
+    if (decidedAt.present) {
+      map['decided_at'] = Variable<DateTime>(decidedAt.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('FeedUploadsCompanion(')
+          ..write('teamId: $teamId, ')
+          ..write('clientMessageId: $clientMessageId, ')
+          ..write('transactionId: $transactionId, ')
+          ..write('status: $status, ')
+          ..write('reason: $reason, ')
+          ..write('serverId: $serverId, ')
+          ..write('appVersion: $appVersion, ')
+          ..write('uploadedAt: $uploadedAt, ')
+          ..write('payloadJson: $payloadJson, ')
+          ..write('reviewState: $reviewState, ')
+          ..write('decidedCategory: $decidedCategory, ')
+          ..write('decidedSubCategory: $decidedSubCategory, ')
+          ..write('decidedAt: $decidedAt, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$AppDatabase extends GeneratedDatabase {
   _$AppDatabase(QueryExecutor e) : super(e);
   $AppDatabaseManager get managers => $AppDatabaseManager(this);
@@ -3439,6 +4253,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final $RawMessagesTable rawMessages = $RawMessagesTable(this);
   late final $MerchantRulesTable merchantRules = $MerchantRulesTable(this);
   late final $BudgetsTable budgets = $BudgetsTable(this);
+  late final $FeedUploadsTable feedUploads = $FeedUploadsTable(this);
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
@@ -3450,6 +4265,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     rawMessages,
     merchantRules,
     budgets,
+    feedUploads,
   ];
   @override
   StreamQueryUpdateRules get streamUpdateRules => const StreamQueryUpdateRules([
@@ -6183,6 +6999,383 @@ typedef $$BudgetsTableProcessedTableManager =
       Budget,
       PrefetchHooks Function({bool categoryId})
     >;
+typedef $$FeedUploadsTableCreateCompanionBuilder =
+    FeedUploadsCompanion Function({
+      required String teamId,
+      required String clientMessageId,
+      Value<int?> transactionId,
+      required String status,
+      Value<String?> reason,
+      Value<int?> serverId,
+      required String appVersion,
+      required DateTime uploadedAt,
+      Value<String?> payloadJson,
+      Value<String> reviewState,
+      Value<String?> decidedCategory,
+      Value<String?> decidedSubCategory,
+      Value<DateTime?> decidedAt,
+      Value<int> rowid,
+    });
+typedef $$FeedUploadsTableUpdateCompanionBuilder =
+    FeedUploadsCompanion Function({
+      Value<String> teamId,
+      Value<String> clientMessageId,
+      Value<int?> transactionId,
+      Value<String> status,
+      Value<String?> reason,
+      Value<int?> serverId,
+      Value<String> appVersion,
+      Value<DateTime> uploadedAt,
+      Value<String?> payloadJson,
+      Value<String> reviewState,
+      Value<String?> decidedCategory,
+      Value<String?> decidedSubCategory,
+      Value<DateTime?> decidedAt,
+      Value<int> rowid,
+    });
+
+class $$FeedUploadsTableFilterComposer
+    extends Composer<_$AppDatabase, $FeedUploadsTable> {
+  $$FeedUploadsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get teamId => $composableBuilder(
+    column: $table.teamId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get clientMessageId => $composableBuilder(
+    column: $table.clientMessageId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get transactionId => $composableBuilder(
+    column: $table.transactionId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get status => $composableBuilder(
+    column: $table.status,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get reason => $composableBuilder(
+    column: $table.reason,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get serverId => $composableBuilder(
+    column: $table.serverId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get appVersion => $composableBuilder(
+    column: $table.appVersion,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get uploadedAt => $composableBuilder(
+    column: $table.uploadedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get payloadJson => $composableBuilder(
+    column: $table.payloadJson,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get reviewState => $composableBuilder(
+    column: $table.reviewState,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get decidedCategory => $composableBuilder(
+    column: $table.decidedCategory,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get decidedSubCategory => $composableBuilder(
+    column: $table.decidedSubCategory,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get decidedAt => $composableBuilder(
+    column: $table.decidedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$FeedUploadsTableOrderingComposer
+    extends Composer<_$AppDatabase, $FeedUploadsTable> {
+  $$FeedUploadsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get teamId => $composableBuilder(
+    column: $table.teamId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get clientMessageId => $composableBuilder(
+    column: $table.clientMessageId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get transactionId => $composableBuilder(
+    column: $table.transactionId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get status => $composableBuilder(
+    column: $table.status,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get reason => $composableBuilder(
+    column: $table.reason,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get serverId => $composableBuilder(
+    column: $table.serverId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get appVersion => $composableBuilder(
+    column: $table.appVersion,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get uploadedAt => $composableBuilder(
+    column: $table.uploadedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get payloadJson => $composableBuilder(
+    column: $table.payloadJson,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get reviewState => $composableBuilder(
+    column: $table.reviewState,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get decidedCategory => $composableBuilder(
+    column: $table.decidedCategory,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get decidedSubCategory => $composableBuilder(
+    column: $table.decidedSubCategory,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get decidedAt => $composableBuilder(
+    column: $table.decidedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$FeedUploadsTableAnnotationComposer
+    extends Composer<_$AppDatabase, $FeedUploadsTable> {
+  $$FeedUploadsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get teamId =>
+      $composableBuilder(column: $table.teamId, builder: (column) => column);
+
+  GeneratedColumn<String> get clientMessageId => $composableBuilder(
+    column: $table.clientMessageId,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get transactionId => $composableBuilder(
+    column: $table.transactionId,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get status =>
+      $composableBuilder(column: $table.status, builder: (column) => column);
+
+  GeneratedColumn<String> get reason =>
+      $composableBuilder(column: $table.reason, builder: (column) => column);
+
+  GeneratedColumn<int> get serverId =>
+      $composableBuilder(column: $table.serverId, builder: (column) => column);
+
+  GeneratedColumn<String> get appVersion => $composableBuilder(
+    column: $table.appVersion,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<DateTime> get uploadedAt => $composableBuilder(
+    column: $table.uploadedAt,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get payloadJson => $composableBuilder(
+    column: $table.payloadJson,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get reviewState => $composableBuilder(
+    column: $table.reviewState,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get decidedCategory => $composableBuilder(
+    column: $table.decidedCategory,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get decidedSubCategory => $composableBuilder(
+    column: $table.decidedSubCategory,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<DateTime> get decidedAt =>
+      $composableBuilder(column: $table.decidedAt, builder: (column) => column);
+}
+
+class $$FeedUploadsTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $FeedUploadsTable,
+          FeedUpload,
+          $$FeedUploadsTableFilterComposer,
+          $$FeedUploadsTableOrderingComposer,
+          $$FeedUploadsTableAnnotationComposer,
+          $$FeedUploadsTableCreateCompanionBuilder,
+          $$FeedUploadsTableUpdateCompanionBuilder,
+          (
+            FeedUpload,
+            BaseReferences<_$AppDatabase, $FeedUploadsTable, FeedUpload>,
+          ),
+          FeedUpload,
+          PrefetchHooks Function()
+        > {
+  $$FeedUploadsTableTableManager(_$AppDatabase db, $FeedUploadsTable table)
+    : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$FeedUploadsTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$FeedUploadsTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$FeedUploadsTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<String> teamId = const Value.absent(),
+                Value<String> clientMessageId = const Value.absent(),
+                Value<int?> transactionId = const Value.absent(),
+                Value<String> status = const Value.absent(),
+                Value<String?> reason = const Value.absent(),
+                Value<int?> serverId = const Value.absent(),
+                Value<String> appVersion = const Value.absent(),
+                Value<DateTime> uploadedAt = const Value.absent(),
+                Value<String?> payloadJson = const Value.absent(),
+                Value<String> reviewState = const Value.absent(),
+                Value<String?> decidedCategory = const Value.absent(),
+                Value<String?> decidedSubCategory = const Value.absent(),
+                Value<DateTime?> decidedAt = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => FeedUploadsCompanion(
+                teamId: teamId,
+                clientMessageId: clientMessageId,
+                transactionId: transactionId,
+                status: status,
+                reason: reason,
+                serverId: serverId,
+                appVersion: appVersion,
+                uploadedAt: uploadedAt,
+                payloadJson: payloadJson,
+                reviewState: reviewState,
+                decidedCategory: decidedCategory,
+                decidedSubCategory: decidedSubCategory,
+                decidedAt: decidedAt,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String teamId,
+                required String clientMessageId,
+                Value<int?> transactionId = const Value.absent(),
+                required String status,
+                Value<String?> reason = const Value.absent(),
+                Value<int?> serverId = const Value.absent(),
+                required String appVersion,
+                required DateTime uploadedAt,
+                Value<String?> payloadJson = const Value.absent(),
+                Value<String> reviewState = const Value.absent(),
+                Value<String?> decidedCategory = const Value.absent(),
+                Value<String?> decidedSubCategory = const Value.absent(),
+                Value<DateTime?> decidedAt = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => FeedUploadsCompanion.insert(
+                teamId: teamId,
+                clientMessageId: clientMessageId,
+                transactionId: transactionId,
+                status: status,
+                reason: reason,
+                serverId: serverId,
+                appVersion: appVersion,
+                uploadedAt: uploadedAt,
+                payloadJson: payloadJson,
+                reviewState: reviewState,
+                decidedCategory: decidedCategory,
+                decidedSubCategory: decidedSubCategory,
+                decidedAt: decidedAt,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map(
+                (e) => (
+                  e.readTable<$FeedUploadsTable, FeedUpload>(table),
+                  BaseReferences<_$AppDatabase, $FeedUploadsTable, FeedUpload>(
+                    db,
+                    table,
+                    e,
+                  ),
+                ),
+              )
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$FeedUploadsTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $FeedUploadsTable,
+      FeedUpload,
+      $$FeedUploadsTableFilterComposer,
+      $$FeedUploadsTableOrderingComposer,
+      $$FeedUploadsTableAnnotationComposer,
+      $$FeedUploadsTableCreateCompanionBuilder,
+      $$FeedUploadsTableUpdateCompanionBuilder,
+      (
+        FeedUpload,
+        BaseReferences<_$AppDatabase, $FeedUploadsTable, FeedUpload>,
+      ),
+      FeedUpload,
+      PrefetchHooks Function()
+    >;
 
 class $AppDatabaseManager {
   final _$AppDatabase _db;
@@ -6199,4 +7392,6 @@ class $AppDatabaseManager {
       $$MerchantRulesTableTableManager(_db, _db.merchantRules);
   $$BudgetsTableTableManager get budgets =>
       $$BudgetsTableTableManager(_db, _db.budgets);
+  $$FeedUploadsTableTableManager get feedUploads =>
+      $$FeedUploadsTableTableManager(_db, _db.feedUploads);
 }

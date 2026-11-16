@@ -135,3 +135,42 @@ class MerchantRules extends Table {
   TextColumn get pattern => text().unique()();
   IntColumn get categoryId => integer().references(Categories, #id, onDelete: KeyAction.cascade)();
 }
+
+/// Joint Journey feed: what this phone has sent, one row per transaction and
+/// team, keyed by the content hash the server de-duplicates on. A
+/// transaction from SMS or email with no row here (for the member's team) is
+/// in the outbox, so a re-parse after a parser upgrade never loses or doubles
+/// an upload.
+class FeedUploads extends Table {
+  TextColumn get teamId => text()();
+
+  /// sha256 of the install id and the source message ids (see FeedOutbox).
+  TextColumn get clientMessageId => text()();
+
+  /// The transaction it was built from; informational, not a foreign key.
+  IntColumn get transactionId => integer().nullable()();
+
+  /// accepted, already_received, rejected or client_outdated.
+  TextColumn get status => text()();
+  TextColumn get reason => text().nullable()();
+  IntColumn get serverId => integer().nullable()();
+
+  /// App version that sent it: rejected and outdated rows are retried after
+  /// an update.
+  TextColumn get appVersion => text()();
+  DateTimeColumn get uploadedAt => dateTime()();
+
+  /// Exact row object included in the request, stored in encrypted local DB.
+  TextColumn get payloadJson => text().nullable()();
+
+  /// What the team decided on the web, read back from the server (v7). The phone never decides:
+  /// pending (waiting), confirmed (reviewed, still waiting), added or linked (in the ledger),
+  /// transfer or ignored (kept out of it).
+  TextColumn get reviewState => text().withDefault(const Constant('pending'))();
+  TextColumn get decidedCategory => text().nullable()();
+  TextColumn get decidedSubCategory => text().nullable()();
+  DateTimeColumn get decidedAt => dateTime().nullable()();
+
+  @override
+  Set<Column> get primaryKey => {teamId, clientMessageId};
+}

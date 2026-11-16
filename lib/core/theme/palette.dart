@@ -1,28 +1,39 @@
 import 'package:flutter/material.dart';
 
-/// Brand + semantic colors. Category colors are tuned to stay distinct
-/// from each other on both the dark and light surfaces.
+/// VarSys brand + semantic colors: zinc (dark) and slate (light) neutrals
+/// with one blue accent, the same tokens as the VarSys web dashboards
+/// (varsys-ui/dashboard/theme.css). Green, red and amber mean status only.
+/// Category colors are tuned to stay distinct from each other on both the
+/// dark and light surfaces.
 abstract final class Palette {
-  // Brand
-  static const mint = Color(0xFF3DDC97);
-  static const violet = Color(0xFF8B7CF6);
-  static const coral = Color(0xFFFF6B6B);
-  static const amber = Color(0xFFFFB547);
+  // Brand: VarSys blue. [brand] is the mid tone used for icons and tints on
+  // either surface; the theme picks [brandLight] / [brandDark] for filled
+  // controls so their labels keep enough contrast.
+  static const brand = Color(0xFF3B82F6); // blue-500
+  static const brandLight = Color(0xFF1154EA); // logo blue, white text
+  static const brandDark = Color(0xFF60A5FA); // blue-400, dark text
+  static const brandDeep = Color(0xFF1E3A8A); // blue-900, summary cards with white text
+  static const brandNavy = Color(0xFF0B1220); // VarSys mark backdrop
 
-  // Dark surfaces
-  static const ink = Color(0xFF0B0C10);
-  static const inkRaised = Color(0xFF14161C);
-  static const inkHigh = Color(0xFF1C1F27);
-  static const inkLine = Color(0xFF262A33);
+  // Status
+  static const green = Color(0xFF22C55E);
+  static const red = Color(0xFFEF4444);
+  static const amber = Color(0xFFF59E0B);
 
-  // Light surfaces
-  static const paper = Color(0xFFF6F6F2);
+  // Dark surfaces (zinc)
+  static const ink = Color(0xFF09090B);
+  static const inkRaised = Color(0xFF18181B);
+  static const inkHigh = Color(0xFF27272A);
+  static const inkLine = Color(0xFF2F2F35);
+
+  // Light surfaces (slate)
+  static const paper = Color(0xFFF8FAFC);
   static const paperRaised = Color(0xFFFFFFFF);
-  static const paperHigh = Color(0xFFEDEDE7);
-  static const paperLine = Color(0xFFE2E2DA);
+  static const paperHigh = Color(0xFFF1F5F9);
+  static const paperLine = Color(0xFFE2E8F0);
 
-  static const income = mint;
-  static const expense = coral;
+  static const income = green;
+  static const expense = red;
 
   /// Validated categorical set (dataviz validator: lightness band, chroma,
   /// CVD + normal-vision separation, 3:1 contrast — passes on both surfaces).
@@ -40,7 +51,4 @@ abstract final class Palette {
 
   /// Catch-all buckets ("Other", transfers, people) — deliberately not a hue.
   static const neutral = Color(0xFF8A90A0);
-
-  /// Gradient used on the hero card.
-  static const heroGradient = [Color(0xFF6D5DF6), Color(0xFF3B2FB8), Color(0xFF1E1A5E)];
 }

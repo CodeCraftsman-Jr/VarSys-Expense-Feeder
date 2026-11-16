@@ -32,7 +32,7 @@ class SecurityCard extends ConsumerWidget {
             secondary: const Icon(PhosphorIconsRegular.fingerprint),
             title: const Text('App lock'),
             subtitle: const Text(
-              'Ask for your fingerprint, face or screen lock when Pckt opens, or returns after 2 minutes away.',
+              'Ask for your fingerprint, face or screen lock when MoneyTrail opens, or returns after 2 minutes away.',
             ),
           ),
           SwitchListTile(
@@ -40,14 +40,14 @@ class SecurityCard extends ConsumerWidget {
             onChanged: ctrl.setHideInRecents,
             secondary: const Icon(PhosphorIconsRegular.eyeSlash),
             title: const Text('Hide in recent apps'),
-            subtitle: const Text('Blanks Pckt in the app switcher and blocks screenshots.'),
+            subtitle: const Text('Blanks MoneyTrail in the app switcher and blocks screenshots.'),
           ),
           ValueListenableBuilder(
             valueListenable: DbEncryption.status,
             builder: (context, status, _) => ListTile(
               leading: Icon(
                 status.encrypted ? PhosphorIconsRegular.lockSimple : PhosphorIconsRegular.warningCircle,
-                color: status.encrypted ? Palette.mint : Palette.amber,
+                color: status.encrypted ? Palette.green : Palette.amber,
               ),
               title: Text(status.encrypted ? 'Database encrypted' : 'Database not encrypted'),
               subtitle: Text(

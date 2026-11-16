@@ -3,11 +3,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/theme/icons.dart';
 
-import '../../core/currency.dart';
 import '../../core/theme/palette.dart';
 import '../../providers.dart';
 import '../../ui/widgets.dart';
-import '../settings/currency_tile.dart';
 
 class OnboardingScreen extends ConsumerStatefulWidget {
   const OnboardingScreen({super.key});
@@ -49,20 +47,18 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
               Text('Your money,\ntracked for you.', style: context.text.displaySmall?.copyWith(height: 1.05)),
               const SizedBox(height: 14),
               Text(
-                'Pckt reads bank, card & UPI alerts, sorts every payment into categories, '
-                'and never counts the same payment twice. Built India-first; works with 30+ currencies.',
+                'MoneyTrail reads your bank, card & UPI alerts and sends each payment to your team '
+                'on Joint Journey, where it is sorted. It never counts the same payment twice. '
+                'Built India-first; works with 30+ currencies.',
                 style: context.text.bodyLarge?.copyWith(color: context.colors.onSurfaceVariant, height: 1.4),
               ),
               const SizedBox(height: 24),
               const _Point(
                 icon: PhosphorIconsFill.shieldCheck,
-                text: 'Parsed on-device — messages never leave your phone',
+                text: 'Alerts are read on this phone, then sent only to your own team',
               ),
               const _Point(icon: PhosphorIconsFill.gitMerge, text: 'Smart dedup across SMS and email'),
-              const _Point(icon: PhosphorIconsFill.sparkle, text: 'Bring your own AI for insights (coming soon)'),
               const Spacer(),
-              const _CurrencyRow(),
-              const SizedBox(height: 12),
               if (supported) ...[
                 Text(
                   'Import history',
@@ -104,29 +100,6 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
   }
 }
 
-/// The home currency, defaulted from the device locale, with a way to change it.
-class _CurrencyRow extends ConsumerWidget {
-  const _CurrencyRow();
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final code = ref.watch(homeCurrencyProvider);
-    return Row(
-      children: [
-        Icon(PhosphorIconsRegular.coins, size: 20, color: context.colors.onSurfaceVariant),
-        const SizedBox(width: 10),
-        Expanded(
-          child: Text(
-            'Currency: ${currencySymbol(code)} ${currencyFor(code)?.name ?? code}',
-            style: context.text.bodyMedium,
-          ),
-        ),
-        TextButton(onPressed: () => changeHomeCurrency(context, ref, confirm: false), child: const Text('Change')),
-      ],
-    );
-  }
-}
-
 class _Point extends StatelessWidget {
   const _Point({required this.icon, required this.text});
   final IconData icon;
@@ -137,7 +110,7 @@ class _Point extends StatelessWidget {
     padding: const EdgeInsets.only(bottom: 12),
     child: Row(
       children: [
-        Icon(icon, color: Palette.mint, size: 22),
+        Icon(icon, color: Palette.brand, size: 22),
         const SizedBox(width: 12),
         Expanded(child: Text(text, style: context.text.bodyMedium)),
       ],
@@ -160,7 +133,6 @@ class _Hero extends StatelessWidget {
           color: context.colors.surfaceContainer,
           borderRadius: BorderRadius.circular(20),
           border: Border.all(color: context.colors.outlineVariant),
-          boxShadow: [BoxShadow(color: color.withValues(alpha: 0.25), blurRadius: 24, offset: const Offset(0, 8))],
         ),
         child: Icon(icon, color: color, size: 30),
       ),
@@ -172,22 +144,10 @@ class _Hero extends StatelessWidget {
       child: Stack(
         clipBehavior: Clip.none,
         children: [
-          Positioned(
-            left: 40,
-            top: 0,
-            child: Container(
-              width: 150,
-              height: 150,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                gradient: RadialGradient(colors: [Palette.violet.withValues(alpha: 0.45), Colors.transparent]),
-              ),
-            ),
-          ),
           Positioned(left: 0, top: 50, child: tile(PhosphorIconsFill.forkKnife, Palette.categories[1], -0.12)),
           Positioned(left: 78, top: 10, child: tile(PhosphorIconsFill.lightning, Palette.categories[0], 0.08)),
           Positioned(left: 156, top: 58, child: tile(PhosphorIconsFill.shoppingBag, Palette.categories[4], 0.14)),
-          Positioned(left: 232, top: 14, child: tile(PhosphorIconsFill.trendUp, Palette.mint, -0.06)),
+          Positioned(left: 232, top: 14, child: tile(PhosphorIconsFill.trendUp, Palette.green, -0.06)),
         ],
       ),
     );

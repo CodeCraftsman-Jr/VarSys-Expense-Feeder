@@ -1,6 +1,6 @@
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
-/// Credentials (LLM API keys, email app passwords, OAuth tokens) live in the
+/// Credentials (email app passwords, OAuth tokens) live in the
 /// platform keystore, never in SharedPreferences or the database.
 class SecretStore {
   SecretStore([FlutterSecureStorage? storage]) : _storage = storage ?? const FlutterSecureStorage();

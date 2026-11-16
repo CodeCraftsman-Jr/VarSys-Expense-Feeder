@@ -5,11 +5,11 @@ import 'package:flutter/services.dart';
 import '../../data/db/tables.dart';
 import '../parser/parsed_txn.dart';
 
-/// Reads the device SMS inbox through the native `pckt/sms` channel
+/// Reads the device SMS inbox through the native `moneytrail/sms` channel
 /// (see MainActivity.kt). Android only — iOS gives apps no access to SMS.
 class SmsSource {
-  static const _channel = MethodChannel('pckt/sms');
-  static const _device = MethodChannel('pckt/device');
+  static const _channel = MethodChannel('moneytrail/sms');
+  static const _device = MethodChannel('moneytrail/device');
 
   bool get isSupported => Platform.isAndroid;
 

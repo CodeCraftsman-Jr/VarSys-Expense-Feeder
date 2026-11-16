@@ -52,6 +52,7 @@ abstract final class PhosphorIconsFill {
   static const trendDown = IconData(0xe4ac, fontFamily: 'PhosphorFill', fontPackage: 'phosphor_flutter');
   static const trendUp = IconData(0xe4ae, fontFamily: 'PhosphorFill', fontPackage: 'phosphor_flutter');
   static const user = IconData(0xe4c2, fontFamily: 'PhosphorFill', fontPackage: 'phosphor_flutter');
+  static const userCircle = IconData(0xe4c4, fontFamily: 'PhosphorFill', fontPackage: 'phosphor_flutter');
   static const wallet = IconData(0xe68a, fontFamily: 'PhosphorFill', fontPackage: 'phosphor_flutter');
   static const warningCircle = IconData(0xe4e2, fontFamily: 'PhosphorFill', fontPackage: 'phosphor_flutter');
   static const wifiHigh = IconData(0xe4ea, fontFamily: 'PhosphorFill', fontPackage: 'phosphor_flutter');
@@ -111,8 +112,11 @@ abstract final class PhosphorIconsBold {
   static const check = IconData(0xe182, fontFamily: 'PhosphorBold', fontPackage: 'phosphor_flutter');
   static const checkCircle = IconData(0xe184, fontFamily: 'PhosphorBold', fontPackage: 'phosphor_flutter');
   static const cloudArrowDown = IconData(0xe1ac, fontFamily: 'PhosphorBold', fontPackage: 'phosphor_flutter');
+  static const cloudArrowUp = IconData(0xe1ae, fontFamily: 'PhosphorBold', fontPackage: 'phosphor_flutter');
+  static const cloudSlash = IconData(0xe1b6, fontFamily: 'PhosphorBold', fontPackage: 'phosphor_flutter');
   static const cpu = IconData(0xe610, fontFamily: 'PhosphorBold', fontPackage: 'phosphor_flutter');
   static const creditCard = IconData(0xe1d2, fontFamily: 'PhosphorBold', fontPackage: 'phosphor_flutter');
+  static const deviceMobile = IconData(0xe1e0, fontFamily: 'PhosphorBold', fontPackage: 'phosphor_flutter');
   static const dotsSixVertical = IconData(0xeae2, fontFamily: 'PhosphorBold', fontPackage: 'phosphor_flutter');
   static const downloadSimple = IconData(0xe20c, fontFamily: 'PhosphorBold', fontPackage: 'phosphor_flutter');
   static const eye = IconData(0xe220, fontFamily: 'PhosphorBold', fontPackage: 'phosphor_flutter');
@@ -132,6 +136,7 @@ abstract final class PhosphorIconsBold {
   static const minusCircle = IconData(0xe32c, fontFamily: 'PhosphorBold', fontPackage: 'phosphor_flutter');
   static const money = IconData(0xe588, fontFamily: 'PhosphorBold', fontPackage: 'phosphor_flutter');
   static const paperPlaneRight = IconData(0xe396, fontFamily: 'PhosphorBold', fontPackage: 'phosphor_flutter');
+  static const paperPlaneTilt = IconData(0xe398, fontFamily: 'PhosphorBold', fontPackage: 'phosphor_flutter');
   static const pause = IconData(0xe39e, fontFamily: 'PhosphorBold', fontPackage: 'phosphor_flutter');
   static const play = IconData(0xe3d0, fontFamily: 'PhosphorBold', fontPackage: 'phosphor_flutter');
   static const plugsConnected = IconData(0xeb5a, fontFamily: 'PhosphorBold', fontPackage: 'phosphor_flutter');
@@ -139,6 +144,7 @@ abstract final class PhosphorIconsBold {
   static const question = IconData(0xe3e8, fontFamily: 'PhosphorBold', fontPackage: 'phosphor_flutter');
   static const receipt = IconData(0xe3ec, fontFamily: 'PhosphorBold', fontPackage: 'phosphor_flutter');
   static const repeat = IconData(0xe3f6, fontFamily: 'PhosphorBold', fontPackage: 'phosphor_flutter');
+  static const signOut = IconData(0xe42a, fontFamily: 'PhosphorBold', fontPackage: 'phosphor_flutter');
   static const sparkle = IconData(0xe6a2, fontFamily: 'PhosphorBold', fontPackage: 'phosphor_flutter');
   static const tag = IconData(0xe478, fontFamily: 'PhosphorBold', fontPackage: 'phosphor_flutter');
   static const wallet = IconData(0xe68a, fontFamily: 'PhosphorBold', fontPackage: 'phosphor_flutter');

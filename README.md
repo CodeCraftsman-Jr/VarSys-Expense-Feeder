@@ -1,3 +1,20 @@
+<p align="center"><img src="assets/branding/source/moneytrail-logo-horizontal.png" width="480" alt="VarSys MoneyTrail"></p>
+
+# VarSys MoneyTrail
+
+VarSys MoneyTrail reads the bank, card and UPI alerts on a member's phone and, from phase 2 of
+the plan, sends them to Joint Journey so a household can see whose money paid for each spend.
+Architecture: `docs/plan/feed-architecture-plan.md`.
+
+**Origin and license.** MoneyTrail is a modified version of
+[Pckt](https://github.com/pritam-ravani/pckt), copyright its original author, and is distributed
+under the same GNU General Public License version 3 (see `LICENSE`). Changes from Pckt: the app
+name, Android application id `com.varsys.moneytrail`, HTTPS-only networking, an About screen, and
+the Joint Journey feed described in the plan. The upstream README follows unchanged below for
+reference.
+
+---
+
 <h1 align="center">Pckt</h1>
 
 <p align="center"><b>A free, open-source finance tracker that fills itself in.</b></p>

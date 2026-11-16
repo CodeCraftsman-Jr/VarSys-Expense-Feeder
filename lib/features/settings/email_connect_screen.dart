@@ -146,11 +146,11 @@ class _EmailConnectScreenState extends ConsumerState<EmailConnectScreen> {
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Icon(PhosphorIconsFill.shieldCheck, color: Palette.mint),
+                const Icon(PhosphorIconsFill.shieldCheck, color: Palette.green),
                 const SizedBox(width: 14),
                 Expanded(
                   child: Text(
-                    'Pckt only reads messages that look like bank alerts or receipts, on this phone. '
+                    'MoneyTrail only reads messages that look like bank alerts or receipts, on this phone. '
                     'Your password stays in the Android keystore and is only sent to your mail server.',
                     style: context.text.bodyMedium?.copyWith(color: context.colors.onSurfaceVariant),
                   ),
@@ -326,7 +326,7 @@ class _ResultBanner extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = ok ? Palette.mint : Palette.coral;
+    final color = ok ? Palette.green : Palette.red;
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(color: color.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(16)),
@@ -355,7 +355,7 @@ class _HowTo extends StatelessWidget {
         'Gmail needs an App Password',
         const [
           'Turn on 2-Step Verification: myaccount.google.com/security',
-          'Open myaccount.google.com/apppasswords, name it "Pckt" and tap Create',
+          'Open myaccount.google.com/apppasswords, name it "MoneyTrail" and tap Create',
           'Copy the 16-character password and paste it below (spaces are fine)',
         ],
         googleReady
@@ -377,7 +377,7 @@ class _HowTo extends StatelessWidget {
         'Yahoo Mail',
         const [
           'Open login.yahoo.com/account/security',
-          'Tap "Generate app password", name it "Pckt"',
+          'Tap "Generate app password", name it "MoneyTrail"',
           'Paste the password below',
         ],
         null,
@@ -407,7 +407,7 @@ class _HowTo extends StatelessWidget {
         children: [
           Row(
             children: [
-              const Icon(PhosphorIconsBold.info, size: 18, color: Palette.violet),
+              const Icon(PhosphorIconsBold.info, size: 18, color: Palette.brand),
               const SizedBox(width: 8),
               Expanded(child: Text(title, style: context.text.titleSmall)),
             ],
@@ -423,10 +423,10 @@ class _HowTo extends StatelessWidget {
                     width: 20,
                     height: 20,
                     alignment: Alignment.center,
-                    decoration: BoxDecoration(color: Palette.violet.withValues(alpha: 0.16), shape: BoxShape.circle),
+                    decoration: BoxDecoration(color: Palette.brand.withValues(alpha: 0.16), shape: BoxShape.circle),
                     child: Text(
                       '${i + 1}',
-                      style: context.text.labelSmall?.copyWith(color: Palette.violet, fontWeight: FontWeight.w700),
+                      style: context.text.labelSmall?.copyWith(color: Palette.brand, fontWeight: FontWeight.w700),
                     ),
                   ),
                   const SizedBox(width: 10),

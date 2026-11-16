@@ -3,20 +3,15 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart';
 import 'package:go_router/go_router.dart';
 
+import 'account/account_providers.dart';
+import 'account/sign_in_gate.dart';
 import 'core/theme/app_theme.dart';
+import 'features/account/sign_in_screen.dart';
 import 'features/activity/activity_screen.dart';
-import 'features/assistant/assistant_screen.dart';
-import 'features/budgets/budgets_screen.dart';
-import 'features/dashboard/dashboard_screen.dart';
-import 'features/insights/insights_screen.dart';
 import 'features/lock/app_lock_gate.dart';
 import 'features/onboarding/onboarding_screen.dart';
 import 'data/db/tables.dart';
-import 'features/recurring/recurring_screen.dart';
-import 'features/settings/accounts_screen.dart';
-import 'features/settings/categories_screen.dart';
 import 'features/settings/email_connect_screen.dart';
-import 'features/settings/llm_settings_screen.dart';
 import 'features/settings/messages_screen.dart';
 import 'features/settings/settings_screen.dart';
 import 'features/shell/home_shell.dart';
@@ -25,13 +20,15 @@ import 'providers.dart';
 final _routerProvider = Provider<GoRouter>((ref) {
   return GoRouter(
     initialLocation: '/',
-    redirect: (context, state) {
-      final onboarded = ref.read(onboardedProvider);
-      if (!onboarded && state.matchedLocation != '/welcome') return '/welcome';
-      if (onboarded && state.matchedLocation == '/welcome') return '/';
-      return null;
-    },
-    refreshListenable: _ProviderListenable(ref, onboardedProvider),
+    redirect: (context, state) => gateRedirect(
+      location: state.matchedLocation,
+      signedIn: ref.read(accountProvider).signedIn,
+      onboarded: ref.read(onboardedProvider),
+    ),
+    refreshListenable: Listenable.merge([
+      _ProviderListenable(ref, onboardedProvider),
+      _ProviderListenable(ref, accountProvider.select((s) => s.signedIn)),
+    ]),
     routes: [
       GoRoute(path: '/welcome', builder: (_, _) => const OnboardingScreen()),
       GoRoute(
@@ -40,30 +37,16 @@ final _routerProvider = Provider<GoRouter>((ref) {
             MessagesScreen(source: s.uri.queryParameters['source'] == 'email' ? SourceKind.email : SourceKind.sms),
       ),
       GoRoute(path: '/email/connect', builder: (_, _) => const EmailConnectScreen()),
-      GoRoute(path: '/llm', builder: (_, _) => const LlmSettingsScreen()),
-      GoRoute(path: '/budgets', builder: (_, _) => const BudgetsScreen()),
-      GoRoute(path: '/recurring', builder: (_, _) => const RecurringScreen()),
-      GoRoute(path: '/settings/accounts', builder: (_, _) => const AccountsScreen()),
-      GoRoute(path: '/settings/categories', builder: (_, _) => const CategoriesScreen()),
+      GoRoute(path: signInPath, builder: (_, _) => const SignInScreen()),
       StatefulShellRoute.indexedStack(
         builder: (_, _, shell) => HomeShell(shell: shell),
         branches: [
           StatefulShellBranch(
-            routes: [GoRoute(path: '/', builder: (_, _) => const DashboardScreen())],
-          ),
-          StatefulShellBranch(
             routes: [
-              GoRoute(
-                path: '/activity',
-                builder: (_, s) => ActivityScreen(initialFilter: s.uri.queryParameters['filter']),
-              ),
+              GoRoute(path: '/', builder: (_, s) => ActivityScreen(initialFilter: s.uri.queryParameters['filter'])),
+              // Older links and notification taps still land on the list.
+              GoRoute(path: '/activity', builder: (_, s) => ActivityScreen(initialFilter: s.uri.queryParameters['filter'])),
             ],
-          ),
-          StatefulShellBranch(
-            routes: [GoRoute(path: '/insights', builder: (_, _) => const InsightsScreen())],
-          ),
-          StatefulShellBranch(
-            routes: [GoRoute(path: '/ask', builder: (_, _) => const AssistantScreen())],
           ),
           StatefulShellBranch(
             routes: [GoRoute(path: '/settings', builder: (_, _) => const SettingsScreen())],
@@ -80,15 +63,15 @@ class _ProviderListenable extends ChangeNotifier {
   }
 }
 
-class PcktApp extends ConsumerWidget {
-  const PcktApp({super.key});
+class MoneyTrailApp extends ConsumerWidget {
+  const MoneyTrailApp({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     // Loads the home currency before anything formats an amount.
     ref.watch(homeCurrencyProvider);
     return MaterialApp.router(
-      title: 'Pckt',
+      title: 'MoneyTrail',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.light(),
       darkTheme: AppTheme.dark(),

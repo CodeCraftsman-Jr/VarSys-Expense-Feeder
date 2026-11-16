@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:ui' show PlatformDispatcher;
 
 import 'package:flutter/material.dart';
@@ -12,6 +13,7 @@ import 'ingestion/parser/email_parser.dart';
 import 'ingestion/parser/sms_parser.dart';
 import 'ingestion/share/share_intake.dart';
 import 'ingestion/sms/sms_source.dart';
+import 'feed/feed_sync.dart';
 
 // ------------------------------------------------------------------ infra
 
@@ -61,6 +63,7 @@ abstract final class PrefKeys {
   /// Set once the messages v1.0's parser skipped (foreign amounts, mostly)
   /// have been re-read with the current rules.
   static const skippedReparsed = 'sms.skippedReparsed';
+  static const repaymentReceiptsDropped = 'sms.repaymentReceiptsDropped';
 }
 
 /// The home currency: totals, budgets and the assistant use it, and amounts
@@ -202,6 +205,13 @@ class SmsSyncController extends Notifier<SmsSyncState> {
         await ref.read(ingestionProvider).reparseSkipped();
         await _prefs.setBool(PrefKeys.skippedReparsed, true);
       }
+      // Lender repayment receipts were stored as income before parser rule
+      // "Loan repayment receipt"; drop them once without a full re-parse,
+      // which would lose the user's edits.
+      if (!(_prefs.getBool(PrefKeys.repaymentReceiptsDropped) ?? false)) {
+        await ref.read(ingestionProvider).dropNowIgnored();
+        await _prefs.setBool(PrefKeys.repaymentReceiptsDropped, true);
+      }
       final last = _prefs.getInt(PrefKeys.smsLastSync);
       final importFrom = _prefs.getInt(PrefKeys.smsImportFrom) ?? 0;
       final since = last == null
@@ -213,6 +223,8 @@ class SmsSyncController extends Notifier<SmsSyncState> {
       await _prefs.setInt(PrefKeys.smsLastSync, started.millisecondsSinceEpoch);
       await _prefs.setInt(PrefKeys.smsParserVersion, smsParserVersion);
       state = state.copyWith(running: false, lastSync: started, lastReport: report);
+      // New bank messages: send them to Joint Journey when the team feed is on.
+      unawaited(ref.read(feedSyncProvider.notifier).run());
       return report;
     } catch (e, st) {
       debugPrint('SMS sync failed: $e\n$st');
@@ -261,7 +273,7 @@ final smsAlertsProvider = NotifierProvider<SmsAlertsController, bool>(SmsAlertsC
 
 // ------------------------------------------------- share / shortcut intake
 
-/// Ingests text shared to Pckt (share sheet, pckt://ingest links) through
+/// Ingests text shared to MoneyTrail (share sheet, moneytrail://ingest links) through
 /// the normal pipeline. State is the latest outcome, for a snackbar.
 class ShareIntakeController extends Notifier<ShareOutcome?> {
   bool _busy = false;
@@ -328,6 +340,22 @@ final allTxnsProvider = StreamProvider<List<TxnView>>((ref) {
   ref.watch(homeCurrencyProvider);
   return ref.watch(databaseProvider).watchTxns(limit: 2000);
 });
+
+/// Latest upload result per Activity transaction, without the stored payload.
+final feedUploadSummariesProvider = StreamProvider.family<Map<int, FeedUploadSummary>, String>((ref, teamId) {
+  return ref.watch(databaseProvider).watchFeedUploadSummaries(teamId).map((rows) {
+    final latest = <int, FeedUploadSummary>{};
+    for (final row in rows) {
+      final transactionId = row.transactionId;
+      if (transactionId != null) latest.putIfAbsent(transactionId, () => row);
+    }
+    return latest;
+  });
+});
+
+final feedUploadForTransactionProvider = FutureProvider.family<FeedUploadSummary?, ({String teamId, int transactionId})>(
+  (ref, key) => ref.watch(databaseProvider).feedUploadForTransaction(key.teamId, key.transactionId),
+);
 
 final categoriesProvider = StreamProvider<List<Category>>((ref) => ref.watch(databaseProvider).watchCategories());
 
