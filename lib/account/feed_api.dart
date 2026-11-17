@@ -151,6 +151,25 @@ class JjFeedClient {
     return [for (final r in (results as List? ?? const [])) (r as Map).cast<String, Object?>()];
   }
 
+  /// Sends up to 100 bank messages the parser could not read into a transaction, so the team keeps
+  /// the original text. Returns the server's per-message answers as raw maps.
+  Future<List<Map<String, Object?>>> uploadUnreadable({
+    required String token,
+    required String deviceId,
+    required List<Map<String, Object?>> rows,
+  }) async {
+    final res = await _call(
+      () => _http.post(
+        _base.resolve('/api/feed/unreadable'),
+        headers: {..._auth(token), 'content-type': 'application/json', 'x-device-id': deviceId},
+        body: jsonEncode({'rows': rows}),
+      ),
+      timeout: const Duration(seconds: 45),
+    );
+    final results = _json(res)['results'];
+    return [for (final r in (results as List? ?? const [])) (r as Map).cast<String, Object?>()];
+  }
+
   /// Takes back up to 100 rows this phone sent earlier and no longer stands
   /// behind (the parser now ignores the message, or the transaction was
   /// deleted). Returns the server's per-row answers.

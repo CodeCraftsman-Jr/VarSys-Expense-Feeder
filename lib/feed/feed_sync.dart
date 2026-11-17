@@ -9,6 +9,7 @@ import '../data/db/database.dart' show FeedDecisionRow;
 import '../data/db/tables.dart';
 import '../providers.dart';
 import 'feed_outbox.dart';
+import 'unreadable_outbox.dart';
 
 abstract final class FeedPrefKeys {
   /// Random per install, kept across sign-outs; hashed into every
@@ -167,6 +168,7 @@ class FeedSyncController extends Notifier<FeedSyncState> {
         await prefs.remove('${FeedPrefKeys.decisionCursor}.${profile.teamId}');
         await _pullDecisionsSafely(client, profile.teamId, token, deviceId);
       }
+      await _sendUnreadable(profile.teamId, token, deviceId, settings.backfillStart);
       final withdrawn = await _withdraw(outbox, profile.teamId, token, deviceId);
       final left = (await outbox.pending(teamId: profile.teamId, from: settings.backfillStart, limit: 0)).pending;
       _revokeRefreshed = false;
@@ -188,6 +190,27 @@ class FeedSyncController extends Notifier<FeedSyncState> {
       }
     }
     return sent;
+  }
+
+  /// Sends the bank messages the parser could not read, so the team keeps their text. A bonus like
+  /// reading decisions: a server without the endpoint yet, or a failed call, must never stop the
+  /// transaction upload. Only a removed phone is passed on.
+  Future<void> _sendUnreadable(String teamId, String token, String deviceId, DateTime? from) async {
+    try {
+      final box = await _unreadableOutbox();
+      final client = ref.read(jjFeedClientProvider);
+      for (var pass = 0; pass < 50; pass++) {
+        final batch = await box.pending(teamId: teamId, from: from);
+        if (batch.rows.isEmpty) return;
+        final answers = await client.uploadUnreadable(token: token, deviceId: deviceId, rows: [for (final r in batch.rows) r.json]);
+        // An answer that records nothing would repeat the same batch forever.
+        if (answers.isEmpty) return;
+        await box.record(teamId, answers);
+        if (!ref.mounted || batch.pending <= batch.rows.length) return;
+      }
+    } on FeedHttpException catch (e) {
+      if (e.code == 'DEVICE_REVOKED') rethrow;
+    }
   }
 
   /// Reading decisions is a bonus: a server that does not have it yet (an older release) or a failed
@@ -281,6 +304,16 @@ class FeedSyncController extends Notifier<FeedSyncState> {
     } on FeedHttpException catch (e) {
       return e.message;
     }
+  }
+
+  Future<UnreadableOutbox> _unreadableOutbox() async {
+    final outbox = await _outbox();
+    return UnreadableOutbox(
+      ref.read(databaseProvider),
+      installId: outbox.installId,
+      appVersion: outbox.appVersion,
+      parserVersions: outbox.parserVersions,
+    );
   }
 
   Future<FeedOutbox> _outbox() async {
