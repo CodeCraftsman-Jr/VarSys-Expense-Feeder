@@ -11,8 +11,8 @@ import '../../feed/feed_sync.dart';
 import '../../core/theme/palette.dart';
 import '../../ui/widgets.dart';
 
-/// Settings entry for the VarSys account that links this phone to a
-/// Joint Journey team.
+/// The VarSys account that links this phone to a Joint Journey team. Shown in the profile sheet
+/// opened from the Activity header.
 class AccountCard extends ConsumerWidget {
   const AccountCard({super.key});
 
@@ -117,7 +117,7 @@ class AccountCard extends ConsumerWidget {
   static String _displayName(AuthProfile p) => (p.name?.trim().isNotEmpty ?? false) ? p.name!.trim() : (p.email ?? 'Signed in');
 
   static String _roleLabel(TeamRole r) => switch (r) {
-    TeamRole.alpha => 'alpha (decides links)',
+    TeamRole.alpha => 'alpha',
     TeamRole.beta => 'beta',
     TeamRole.gamma => 'gamma',
   };
