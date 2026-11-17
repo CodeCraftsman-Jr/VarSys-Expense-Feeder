@@ -31,11 +31,15 @@ class AuthProfile {
     required this.name,
     required this.teamId,
     required this.role,
+    this.image,
   });
 
   final String userId;
   final String? email;
   final String? name;
+
+  /// The member's profile photo: an https link from the sign-in session, null when they have none.
+  final String? image;
 
   /// Empty when the account belongs to no team yet.
   final String teamId;
@@ -43,12 +47,23 @@ class AuthProfile {
 
   bool get hasTeam => teamId.isNotEmpty;
 
+  AuthProfile withImage(String? image) =>
+      AuthProfile(userId: userId, email: email, name: name, teamId: teamId, role: role, image: image);
+
+  /// Only a plain https link is ever loaded as a photo (never http, data: or file: links).
+  static String? safeImage(Object? value) {
+    if (value is! String) return null;
+    final uri = Uri.tryParse(value.trim());
+    return uri != null && uri.scheme == 'https' && uri.host.isNotEmpty ? uri.toString() : null;
+  }
+
   factory AuthProfile.fromJson(Map<String, Object?> j) => AuthProfile(
     userId: j['userId']! as String,
     email: j['email'] as String?,
     name: j['name'] as String?,
     teamId: (j['teamId'] as String?) ?? '',
     role: TeamRole.parse(j['role'] as String?),
+    image: safeImage(j['image']),
   );
 
   Map<String, Object?> toJson() => {
@@ -57,6 +72,7 @@ class AuthProfile {
     'name': name,
     'teamId': teamId,
     'role': role.name,
+    'image': image,
   };
 }
 
@@ -112,10 +128,30 @@ class VarSysAuthClient {
     final res = await _send(() => _http.get(_url('/api/auth/tenant-context'), headers: _bearer(token)));
     if (res.statusCode == 200) {
       final body = jsonDecode(res.body);
-      if (body is Map<String, Object?> && body['userId'] is String) return AuthProfile.fromJson(body);
+      if (body is Map<String, Object?> && body['userId'] is String) {
+        final profile = AuthProfile.fromJson(body);
+        // The photo lives on the session user, not in the team context.
+        return profile.image != null ? profile : profile.withImage(await _sessionImage(token));
+      }
       throw const AuthException(AuthFailure.server, 'Unexpected reply from the sign-in server.');
     }
     throw _failure(res, signingIn: false);
+  }
+
+  /// The signed-in member's photo link, from Better Auth's session. Best effort: a missing photo or
+  /// any failure just means the initial is shown, never a failed sign-in.
+  Future<String?> _sessionImage(String token) async {
+    try {
+      final res = await _send(() => _http.get(_url('/api/auth/get-session'), headers: _bearer(token)));
+      if (res.statusCode != 200) return null;
+      final body = jsonDecode(res.body);
+      final user = body is Map ? body['user'] : null;
+      return user is Map ? AuthProfile.safeImage(user['image']) : null;
+    } on AuthException {
+      return null;
+    } on FormatException {
+      return null;
+    }
   }
 
   /// Ends the session on the server. Best effort: the token is forgotten

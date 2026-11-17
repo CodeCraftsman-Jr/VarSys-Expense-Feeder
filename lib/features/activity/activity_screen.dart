@@ -8,6 +8,7 @@ import '../../core/format.dart';
 import '../../data/db/database.dart';
 import '../../providers.dart';
 import '../../ui/widgets.dart';
+import '../account/profile_button.dart';
 import 'transaction_sheet.dart';
 
 /// [foreign] = other currencies; its chip shows only when there are any.
@@ -71,7 +72,12 @@ class _ActivityScreenState extends ConsumerState<ActivityScreen> {
           children: [
             Padding(
               padding: const EdgeInsets.fromLTRB(20, 16, 20, 12),
-              child: Row(children: [Text('Activity', style: context.text.headlineSmall)]),
+              child: Row(
+                children: [
+                  Expanded(child: Text('Activity', style: context.text.headlineSmall)),
+                  const ProfileButton(),
+                ],
+              ),
             ),
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16),

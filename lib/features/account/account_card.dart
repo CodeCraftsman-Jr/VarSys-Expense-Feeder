@@ -10,9 +10,10 @@ import '../../core/theme/icons.dart';
 import '../../feed/feed_sync.dart';
 import '../../core/theme/palette.dart';
 import '../../ui/widgets.dart';
+import 'profile_avatar.dart';
 
-/// Settings entry for the VarSys account that links this phone to a
-/// Joint Journey team.
+/// The VarSys account that links this phone to a Joint Journey team. Shown in the profile sheet
+/// opened from the Activity header.
 class AccountCard extends ConsumerWidget {
   const AccountCard({super.key});
 
@@ -28,14 +29,7 @@ class AccountCard extends ConsumerWidget {
         children: [
           Row(
             children: [
-              Container(
-                padding: const EdgeInsets.all(10),
-                decoration: BoxDecoration(
-                  color: context.colors.primary.withValues(alpha: 0.12),
-                  borderRadius: BorderRadius.circular(14),
-                ),
-                child: Icon(PhosphorIconsFill.userCircle, color: context.colors.primary),
-              ),
+              ProfileAvatar(profile: profile, size: 52),
               const SizedBox(width: 14),
               Expanded(
                 child: Column(
@@ -117,7 +111,7 @@ class AccountCard extends ConsumerWidget {
   static String _displayName(AuthProfile p) => (p.name?.trim().isNotEmpty ?? false) ? p.name!.trim() : (p.email ?? 'Signed in');
 
   static String _roleLabel(TeamRole r) => switch (r) {
-    TeamRole.alpha => 'alpha (decides links)',
+    TeamRole.alpha => 'alpha',
     TeamRole.beta => 'beta',
     TeamRole.gamma => 'gamma',
   };
