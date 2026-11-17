@@ -28,6 +28,7 @@ abstract final class PhosphorIconsFill {
   static const handCoins = IconData(0xea8c, fontFamily: 'PhosphorFill', fontPackage: 'phosphor_flutter');
   static const heartbeat = IconData(0xe2ac, fontFamily: 'PhosphorFill', fontPackage: 'phosphor_flutter');
   static const house = IconData(0xe2c2, fontFamily: 'PhosphorFill', fontPackage: 'phosphor_flutter');
+  static const info = IconData(0xe2ce, fontFamily: 'PhosphorFill', fontPackage: 'phosphor_flutter');
   static const lightning = IconData(0xe2de, fontFamily: 'PhosphorFill', fontPackage: 'phosphor_flutter');
   static const listBullets = IconData(0xe2f2, fontFamily: 'PhosphorFill', fontPackage: 'phosphor_flutter');
   static const money = IconData(0xe588, fontFamily: 'PhosphorFill', fontPackage: 'phosphor_flutter');
