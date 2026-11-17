@@ -10,6 +10,7 @@ import '../../core/theme/icons.dart';
 import '../../feed/feed_sync.dart';
 import '../../core/theme/palette.dart';
 import '../../ui/widgets.dart';
+import 'profile_avatar.dart';
 
 /// The VarSys account that links this phone to a Joint Journey team. Shown in the profile sheet
 /// opened from the Activity header.
@@ -28,14 +29,7 @@ class AccountCard extends ConsumerWidget {
         children: [
           Row(
             children: [
-              Container(
-                padding: const EdgeInsets.all(10),
-                decoration: BoxDecoration(
-                  color: context.colors.primary.withValues(alpha: 0.12),
-                  borderRadius: BorderRadius.circular(14),
-                ),
-                child: Icon(PhosphorIconsFill.userCircle, color: context.colors.primary),
-              ),
+              ProfileAvatar(profile: profile, size: 52),
               const SizedBox(width: 14),
               Expanded(
                 child: Column(

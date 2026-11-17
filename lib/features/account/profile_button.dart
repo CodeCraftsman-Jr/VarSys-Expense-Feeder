@@ -6,8 +6,10 @@ import '../../account/feed_api.dart';
 import '../../core/theme/palette.dart';
 import '../../ui/widgets.dart';
 import 'account_card.dart';
+import 'profile_avatar.dart';
 
-/// The round profile button in the Activity header. It shows the member's initial, with a small
+/// The round profile button in the Activity header. It shows the member's photo (their initial when
+/// they have none), with a small
 /// dot when something needs a look (not signed in, a notice, or this phone is not registered).
 /// Tapping it opens the profile: name, team, role, the team feed switch and Sign out.
 class ProfileButton extends ConsumerWidget {
@@ -17,12 +19,6 @@ class ProfileButton extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final account = ref.watch(accountProvider);
     final profile = account.profile;
-    final name = profile == null
-        ? ''
-        : ((profile.name?.trim().isNotEmpty ?? false)
-              ? profile.name!.trim()
-              : (profile.email ?? ''));
-    final initial = name.isEmpty ? null : name.characters.first.toUpperCase();
     final needsLook =
         profile == null ||
         account.notice != null ||
@@ -43,21 +39,7 @@ class ProfileButton extends ConsumerWidget {
             child: Stack(
               alignment: Alignment.center,
               children: [
-                CircleAvatar(
-                  radius: 18,
-                  backgroundColor: context.colors.primary.withValues(
-                    alpha: 0.16,
-                  ),
-                  foregroundColor: context.colors.primary,
-                  child: initial == null
-                      ? const Icon(Icons.person_outline, size: 20)
-                      : Text(
-                          initial,
-                          style: context.text.titleMedium?.copyWith(
-                            color: context.colors.primary,
-                          ),
-                        ),
-                ),
+                ProfileAvatar(profile: profile, size: 36),
                 if (needsLook)
                   Positioned(
                     top: 6,
