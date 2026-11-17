@@ -32,8 +32,9 @@ android {
         applicationId = "com.varsys.moneytrail"
         // You can update the following values to match your application needs.
         // For more information, see: https://flutter.dev/to/review-gradle-config.
-        // LiteRT-LM (on-device models) needs Android 11+.
-        minSdk = 30
+        // Flutter's default (Android 7.0, API 24). This was 30 for the on-device models, which were
+        // removed in e127642; Android 10 and older phones got "problem parsing the package".
+        minSdk = flutter.minSdkVersion
         targetSdk = flutter.targetSdkVersion
         // Uses the version code from pubspec.yaml. When using split APKs, 1000 * ABI_VERSION
         // is added automatically by Flutter. (https://developer.android.com/studio/build/configure-apk-splits#configure-APK-versions)

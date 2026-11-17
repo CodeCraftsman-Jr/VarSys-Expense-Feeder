@@ -21,7 +21,7 @@ reference.
 
 <p align="center">
   <a href="LICENSE"><img src="https://img.shields.io/github/license/pritam-ravani/pckt" alt="License: GPL-3.0"></a>
-  <img src="https://img.shields.io/badge/platform-Android%2011%2B-3DDC84?logo=android&logoColor=white" alt="Platform: Android 11+">
+  <img src="https://img.shields.io/badge/platform-Android%207%2B-3DDC84?logo=android&logoColor=white" alt="Platform: Android 7+">
   <a href="https://github.com/pritam-ravani/pckt/releases/latest"><img src="https://img.shields.io/github/v/release/pritam-ravani/pckt" alt="Latest release"></a>
   <a href="https://github.com/pritam-ravani/pckt/stargazers"><img src="https://img.shields.io/github/stars/pritam-ravani/pckt?style=flat" alt="GitHub stars"></a>
 </p>
@@ -30,7 +30,7 @@ reference.
 
 <p align="center">
   <a href="https://github.com/pritam-ravani/pckt/releases/latest"><img src="https://img.shields.io/badge/Download-APK-6D5DF6?style=for-the-badge&logo=android&logoColor=white" alt="Download the APK" height="44"></a>
-  <br><sub>Android 11+, 64-bit · free, no account, no ads</sub>
+  <br><sub>Android 7+ · free, no account, no ads</sub>
 </p>
 
 <p align="center">

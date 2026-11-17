@@ -132,7 +132,8 @@ storage, Android version and GPU support (`moneytrail/device` channel).
 - Downloads run as a `dataSync` foreground service with a notification (WorkManager otherwise kills
   them at 9 minutes, and Hugging Face files can't resume). Mobile data is never used without asking;
   if Wi-Fi drops the download stops, and orphaned downloads are cancelled at startup.
-- Needs Android 11+ on arm64 (`minSdk 30`). Qualcomm / Tensor NPU bundles are in the catalog but off:
+- Historical: this feature needed Android 11+ (`minSdk 30`); it was removed in `e127642` and the app's
+  `minSdk` is now Flutter's default (24). Qualcomm / Tensor NPU bundles were in the catalog but off:
   enabling them means `qualcomm_npu: true` in pubspec (Qualcomm's licence, +83 MB).
 - Measured on a Galaxy F23 (6 GB, Snapdragon 750G): Gemma 4 E2B loads on the GPU and calls tools,
   but memory is tight and a multi-step Ask answer takes minutes.
