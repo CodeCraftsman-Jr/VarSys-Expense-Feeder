@@ -2,5 +2,7 @@
 <resources>
     <!-- Light mode splash: Palette.paper, slate-50 (dark mode: values-night). -->
     <color name="splash_background">#F8FAFC</color>
+    <!-- Android 7 and 8 use light navigation icons, so keep the launch bar dark. -->
+    <color name="legacy_navigation_bar">#09090B</color>
     <bool name="light_system_bars">true</bool>
 </resources>

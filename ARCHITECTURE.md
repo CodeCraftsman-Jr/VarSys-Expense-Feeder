@@ -9,7 +9,7 @@ How MoneyTrail works inside, for contributors. What the app does and how to set 
 flutter pub get
 dart run build_runner build -d   # drift codegen
 flutter run                      # phone connected with USB debugging on
-flutter test                     # parser, dedup pipeline, LLM providers, agent
+flutter test                     # parser, dedup pipeline and app behavior
 ```
 
 ## Architecture
@@ -24,9 +24,7 @@ lib/
     email/              IMAP (enough_mail) + Gmail API sources, HTML→text, EmailSyncController
     parser/email_*      email parser: sender-domain directory, bank alerts via SMS rules, merchant receipts
   data/db/              drift schema: accounts, categories, transactions, raw_messages, merchant_rules
-  llm/                  bring-your-own LLM: LlmClient + OpenAI-compatible / Anthropic / Gemini clients,
-                        fallback parser, AI categoriser, agent + tools over the local DB
-  features/             dashboard, activity, insights, assistant (Ask), settings, onboarding
+  features/             dashboard, activity, insights, settings, onboarding
   core/theme/           palette (validated categorical colors), typography, icon map
 ```
 
@@ -64,8 +62,8 @@ from `intl`'s CLDR data: paise and cents, whole yen/won/dong/rupiah, fils for KW
 ISO 4217 code on every transaction and account (schema v4; rows from v1.0 are INR).
 
 - **Home currency.** Chosen at onboarding (defaulted from the phone's region) and in
-  Settings → Money → Currency. Existing installs keep INR. Totals, budgets, charts, notifications,
-  the assistant and its tools use it. Budgets remember their currency and pause if you switch.
+  Settings → Money → Currency. Existing installs keep INR. Totals, budgets, charts and notifications
+  use it. Budgets remember their currency and pause if you switch.
 - **Foreign transactions.** MoneyTrail has no server and never fetches exchange rates. A message that
   states the home-currency equivalent is stored with both amounts and counts at once. Otherwise the
   transaction keeps its own currency, is shown with "not in totals", and you add what the bank
@@ -113,56 +111,6 @@ has an OAuth client id. One-time Google Cloud setup:
    ```sh
    flutter run --dart-define=GOOGLE_OAUTH_CLIENT_ID=1234567890-abc.apps.googleusercontent.com
    ```
-
-## LLM integration
-
-Providers, what each AI feature does, and what leaves the phone are in the README (*Connect an AI*).
-The API key is stored in the Android keystore (flutter_secure_storage); provider, URL, model and
-toggles in SharedPreferences under `llm.*`. AI-read messages are strict JSON, validated (the amount
-must literally appear in the message) and fed through the same dedup → categorise → store path as
-rule-parsed messages. The Ask agent runs at most 8 tool steps.
-
-## On-device models
-
-The model is chosen in `lib/llm/on_device/model_catalog.dart` from the phone's RAM, chip, free
-storage, Android version and GPU support (`moneytrail/device` channel).
-
-- Runs on the GPU (OpenCL) and falls back to CPU; Gemma 4 runs at float32 because half precision
-  copies digits wrongly from long prompts.
-- Downloads run as a `dataSync` foreground service with a notification (WorkManager otherwise kills
-  them at 9 minutes, and Hugging Face files can't resume). Mobile data is never used without asking;
-  if Wi-Fi drops the download stops, and orphaned downloads are cancelled at startup.
-- Historical: this feature needed Android 11+ (`minSdk 30`); it was removed in `e127642` and the app's
-  `minSdk` is now Flutter's default (24). Qualcomm / Tensor NPU bundles were in the catalog but off:
-  enabling them means `qualcomm_npu: true` in pubspec (Qualcomm's licence, +83 MB).
-- Measured on a Galaxy F23 (6 GB, Snapdragon 750G): Gemma 4 E2B loads on the GPU and calls tools,
-  but memory is tight and a multi-step Ask answer takes minutes.
-
-### Keeping it responsive (`lib/llm/on_device/`)
-
-- **Warm model.** The loaded model stays in memory between questions (flutter_edge_ai caches it per
-  spec + parameters; we always pass the same ones) and is unloaded after 3 minutes unused, on
-  Android memory pressure, or when the app is torn down. Only the first question pays the load.
-- **Conversation reuse.** Each agent step used to open a new LiteRT conversation and replay the
-  whole transcript (system prompt, tool schemas, earlier turns) as one prompt. Now the conversation
-  of the previous step is kept, and when the next request extends it only the new messages — usually
-  just the tool results — are fed in, so the phone prefills a few hundred tokens instead of the whole
-  history. A follow-up question in the same chat continues the same conversation too.
-- **Smaller requests.** Small-context clients (`LlmBudget`) get tool results compacted to ≤ 10 rows /
-  ~2.8 k chars (raw numbers that have a `*_formatted` twin dropped, nulls dropped), a 1,024-token
-  output cap and at most 4 tool steps (`lib/llm/agent/tool_result_budget.dart`).
-- **Streaming.** The Ask tab shows the answer as the model writes it, and says when the model is
-  still loading.
-- **Ask first.** One generation runs at a time; Ask requests jump the queue and stop a running
-  background batch (`OnDeviceScheduler`). Background AI (categorising, reading unreadable messages)
-  is **off by default** on-device; when switched on it runs at most every 6 hours (30 minutes while
-  charging), 3 batches per run, only while the app is in front and Ask is idle, and resumes later if
-  interrupted.
-- **Timeouts** depend on the model size and the job: e.g. ~3.5 min per Ask turn and ~7 min per batch
-  for Gemma 4 E2B; a timed-out Ask turn says so plainly.
-- **Measuring.** Every turn logs one line tagged `[moneytrail-ondevice]` (`adb logcat -s flutter`):
-  queue wait, load time (warm or cold), new vs reused conversation, prefill (time to first token),
-  decode time, output size and total.
 
 ## Real-time SMS alerts (Android)
 

@@ -10,10 +10,14 @@ import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Build
 import android.provider.Telephony
+import androidx.annotation.ChecksSdkIntAtLeast
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import java.text.NumberFormat
 import java.util.Locale
+
+@ChecksSdkIntAtLeast(api = 26)
+internal fun supportsNotificationChannels(sdkInt: Int): Boolean = sdkInt >= 26
 
 /**
  * Posts "₹250 debited · HDFC — tap to open" (or "USD 12.50 debited · …") as
@@ -157,6 +161,7 @@ class SmsAlertReceiver : BroadcastReceiver() {
         }
 
         fun ensureChannel(context: Context) {
+            if (!supportsNotificationChannels(Build.VERSION.SDK_INT)) return
             val nm = context.getSystemService(NotificationManager::class.java) ?: return
             if (nm.getNotificationChannel(CHANNEL_ID) != null) return
             nm.createNotificationChannel(

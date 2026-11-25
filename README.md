@@ -36,13 +36,11 @@ reference.
 <p align="center">
   <img src="assets/branding/screens/activity.png" width="250" alt="Activity: transactions read from bank SMS">
   <img src="assets/branding/screens/categories.png" width="250" alt="Home: budget and where the money went">
-  <img src="assets/branding/screens/ask.png" width="250" alt="Ask: questions about your spending">
 </p>
 
-Pckt reads the bank, card and UPI alerts already arriving on your phone by SMS and email, turns them
-into transactions, merges the copies, and sorts each one into a category. You don't type anything
-in. Everything stays in an encrypted database on your phone. If you want AI help, you connect your
-own LLM (cloud or on-device); Pckt has no server and no account.
+MoneyTrail reads bank, card and UPI alerts arriving on your phone by SMS and email, turns them into
+transactions, merges copies, and sorts each one into a category. Everything stays in an encrypted
+database on your phone.
 
 Built for India first (Indian bank SMS formats, UPI references and VPAs, NACH/IMPS/NEFT, lakh/crore
 grouping), and works with 30+ currencies: pick your home currency, and spends abroad keep theirs.
@@ -56,17 +54,12 @@ send them to someone else's server.
 - **Messages in, transactions out.** A rule-based parser understands Indian bank alerts (sender
   IDs, amounts, account last-4, UPI refs, merchants) and reads amounts in any currency ("USD 12.50",
   "£8.40", "AED 120.00"), so generic card and bank alerts from elsewhere parse too, flagged for a
-  quick review. Messages the rules can't read can optionally go to your LLM.
+  quick review.
 - **One payment, one row.** The same ₹450 Swiggy order shows up as a bank SMS, a bank email and a
   Swiggy receipt. A scoring dedup engine (same reference, account, time, merchant, channel) merges
   them, and you can see why each merge happened and undo it. Transfers between your own accounts are
   recognised and kept out of spend.
-- **Learns your categories.** When you fix a category, it becomes a merchant rule. Your edits always
-  beat the AI.
-- **Bring your own brain.** Plug in OpenAI-compatible (OpenAI, OpenRouter, Groq, Ollama…),
-  Anthropic or Gemini keys, or download a Gemma model that runs entirely on the phone. The **Ask**
-  tab is an agent with tools over your local data ("How much did I spend on food in September vs
-  August?"), and it asks before changing anything.
+- **Learns your categories.** When you fix a category, it becomes a merchant rule.
 
 ## How it compares
 
@@ -78,7 +71,6 @@ send them to someone else's server.
 | SMS + email dedup | ✓ | — | — | n/a |
 | Where data lives | Your phone, encrypted (SQLCipher) | Your phone | Their cloud | Their cloud |
 | Account needed | No | No | Yes | Yes |
-| AI | Optional: your own key or fully on-device | — | — | Vendor's own, in their cloud (Monarch) |
 | Budgets, recurring, export | ✓ | ✓ (recurring and backup are Pro) | Budgets, bill reminders | ✓ |
 | Platforms | Android (iOS via Shortcuts, untested) | Android, Linux, Windows | Android, iOS | Web, iOS, Android |
 
@@ -99,12 +91,10 @@ the device and has nothing to sell you.
   Outlook, Yahoo, Zoho or any server; optional Gmail OAuth)
 - Share any message or receipt into Pckt, plus a `pckt://ingest` link for iOS Shortcuts
 - Dashboard, activity feed, insights charts, budgets per category, recurring payment detection
-- A home currency (31 to choose from, defaulted from the phone's region) for totals, budgets and the
-  assistant; transactions and accounts keep their own currency, with correct decimals (¥1,200,
+- A home currency (31 to choose from, defaulted from the phone's region) for totals and budgets;
+  transactions and accounts keep their own currency, with correct decimals (¥1,200,
   KWD 12.500) and Indian grouping only for rupees
 - Edit transactions, manage accounts and categories; every source message is inspectable
-- Optional AI: read unusual messages, categorise leftovers, chat with your finances
-- On-device Gemma 4 / Qwen3 picked for your phone's RAM and chip, downloaded once over Wi-Fi
 - Encrypted database, optional biometric app lock, hidden from screenshots and recents, no cloud
   backup; CSV export and full JSON backup/restore
 
@@ -137,67 +127,11 @@ SMS, so an email and its SMS become one transaction. The password is kept in the
 </details>
 
 <details>
-<summary><b>Connect an AI (your own key or on the phone)</b></summary>
-
-Settings → *Connect your LLM*. Requests go straight from the phone to the provider you
-pick; there is no Pckt server. Models are listed live from the provider's models endpoint
-(free text works too).
-
-| Provider | API | Notes |
-|---|---|---|
-| OpenAI, OpenRouter, Groq, DeepSeek, any OpenAI-compatible | Chat Completions + `tools` | configurable base URL |
-| Ollama / LM Studio on your computer | OpenAI-compatible at `http://<LAN-IP>:11434/v1` / `:1234/v1` | key optional; pick a model with tool calling |
-| Anthropic Claude | Messages API + tool use | |
-| Google Gemini | `generateContent` + function declarations | |
-| On this phone (Gemma) | LiteRT-LM via `flutter_edge_ai` | model picked for the device, downloaded once; see below |
-
-What it does:
-
-- **AI reading** of messages the rules flagged as unreadable. The answer is strict JSON, validated
-  (the amount must literally appear in the message), and fed through the same dedup → categorise →
-  store path as rule-parsed messages, so an AI-read email still merges with its SMS. Non-transactions
-  are ignored with an `AI: …` reason. AI-read transactions are marked for a quick review.
-- **AI categorisation** of transactions left in *Other* / *Other Income*. Names are validated against
-  your categories; confident merchant-level answers become merchant rules, so the rule engine learns.
-  AI choices are never locked — your own edits always win.
-- **Ask** tab: an agent (max 8 tool steps) with `query_transactions`, `spending_summary`,
-  `list_categories`, `list_accounts`, `find_recurring` and `recategorize` (asks you to confirm first).
-
-#### Privacy
-
-The API key is stored in the Android keystore (flutter_secure_storage); provider, URL, model and
-toggles in SharedPreferences under `llm.*`. Nothing is sent until a provider is saved **and** the
-matching switch is on:
-
-| Switch | Default | What leaves the phone |
-|---|---|---|
-| AI categorisation | on | merchant, counterparty/VPA, amount, direction, payment mode, date |
-| AI reading of unreadable messages | **off** | the full text and sender of those messages |
-| Assistant chat | on | your questions + structured tool results (totals, matching transactions); never raw messages |
-
-#### On-device models
-
-Settings → Connect your LLM → *On this phone (Gemma)*. Pckt recommends the most capable model that
-fits your phone:
-
-| Model | Download | Picked when | Ask tab |
-|---|---|---|---|
-| Gemma 4 E4B | 3.4 GB | ≥ 10.5 GB RAM | ✓ |
-| Gemma 4 E2B | 2.4 GB | ≥ 5.2 GB RAM (6 GB phones) | ✓ |
-| Gemma 3 1B | 0.6 GB | small phones, with a Hugging Face token (gated licence) | — |
-| Qwen3 0.6B | 0.3 GB | small phones, no token | ✓ |
-
-Models download once, over Wi-Fi only (mobile data is never used without asking). On a mid-range
-6 GB phone, a multi-step Ask answer can take minutes.
-
-</details>
-
-<details>
 <summary><b>Currencies</b></summary>
 
 - **Home currency.** Chosen at onboarding (defaulted from the phone's region) and in
-  Settings → Money → Currency. Existing installs keep INR. Totals, budgets, charts, notifications,
-  the assistant and its tools use it. Budgets remember their currency and pause if you switch.
+  Settings → Money → Currency. Existing installs keep INR. Totals, budgets, charts and notifications
+  use it. Budgets remember their currency and pause if you switch.
 - **Foreign transactions.** Pckt has no server and never fetches exchange rates. A message that
   states the home-currency equivalent is stored with both amounts and counts at once. Otherwise the
   transaction keeps its own currency, is shown with "not in totals", and you add what the bank
@@ -276,10 +210,9 @@ version, you must publish its source under the same license.
 - [x] Phase 2 — Android SMS import + parser, dedup, auto-categorisation, account discovery
 - [x] Phase 3 — Email: IMAP with app passwords (Gmail, Outlook, Yahoo, Zoho, any IMAP) + optional
       Gmail OAuth (`gmail.readonly`); email parser feeding the same pipeline, SMS↔email dedup
-- [x] Phase 4 — Bring-your-own LLM: OpenAI-compatible / Anthropic / Gemini, key in secure storage;
-      LLM fallback for unreadable messages; agent chat with tools over the local DB
-- [x] Phase 5 — budgets, recurring payments, editing, SQLCipher encryption, app lock, on-device Gemma
-      models, iOS Shortcuts / share bridge, real-time SMS alerts, CSV export & JSON backup
+- [x] Phase 4 — optional LLM features (removed; the phone no longer sends finance data to AI providers)
+- [x] Phase 5 — budgets, recurring payments, editing, SQLCipher encryption, app lock, iOS Shortcuts /
+      share bridge, real-time SMS alerts, CSV export & JSON backup
 - [x] v1.0.1 — multi-currency: home currency, per-transaction and per-account currency, foreign card
       spends, currency-agnostic SMS amounts for alerts from outside India
 - [ ] Next — bank sender lists and formats for the Gulf, UK, US and Singapore, iOS testing, Qualcomm
@@ -294,5 +227,5 @@ flutter run                      # phone connected with USB debugging on
 flutter test
 ```
 
-How the parser, dedup engine, database, encryption, LLM integration and release builds work is in
+How the parser, dedup engine, database, encryption and release builds work is in
 [ARCHITECTURE.md](ARCHITECTURE.md).

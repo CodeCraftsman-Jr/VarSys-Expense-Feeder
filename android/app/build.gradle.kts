@@ -81,4 +81,5 @@ dependencies {
     // Background SMS import and Joint Journey sync (SyncWorker); same version background_downloader uses.
     implementation("androidx.work:work-runtime-ktx:2.11.0")
     coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.4")
+    testImplementation("junit:junit:4.13.2")
 }
