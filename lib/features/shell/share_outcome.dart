@@ -13,7 +13,7 @@ void showShareOutcome(BuildContext context, ShareOutcome o) {
   final txn = o.txn;
   final text = switch (o.kind) {
     ShareOutcomeKind.added => txn == null ? 'Transaction added' : 'Added ${describe(txn)}',
-    ShareOutcomeKind.merged => txn == null ? 'Already tracked' : 'Already tracked — matched ${describe(txn)}',
+    ShareOutcomeKind.merged => txn == null ? 'Already tracked' : 'Already tracked: matched ${describe(txn)}',
     ShareOutcomeKind.duplicate => txn == null ? 'Already shared this message' : 'Already added: ${describe(txn)}',
     ShareOutcomeKind.ignored => 'Not a transaction${o.reason == null ? '' : ' (${o.reason!.toLowerCase()})'}',
     ShareOutcomeKind.unreadable => "Couldn't read a transaction from that text",

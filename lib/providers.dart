@@ -190,7 +190,7 @@ class SmsSyncController extends Notifier<SmsSyncState> {
     if (state.running || !state.enabled) return null;
     final sms = ref.read(smsSourceProvider);
     if (!await sms.hasPermission()) {
-      state = state.copyWith(error: 'SMS permission missing — reconnect in Settings');
+      state = state.copyWith(error: 'SMS permission missing. Reconnect in Settings.');
       return null;
     }
     state = state.copyWith(running: true);

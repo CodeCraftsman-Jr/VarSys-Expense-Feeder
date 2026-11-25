@@ -386,7 +386,7 @@ Future<DbOpenPlan> prepareDatabase(String path, SecretStore secrets, {BlockingRu
         return DbOpenPlan(
           path,
           null,
-          DbSecurityStatus(encrypted: false, detail: 'Not encrypted yet — will retry (${result.error})'),
+          DbSecurityStatus(encrypted: false, detail: 'Not encrypted yet. Will retry (${result.error}).'),
         );
       }
       return DbOpenPlan(

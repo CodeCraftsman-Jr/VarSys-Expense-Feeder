@@ -116,11 +116,12 @@ has an OAuth client id. One-time Google Cloud setup:
 
 `SmsAlertReceiver.kt` listens for `SMS_RECEIVED` (permission `RECEIVE_SMS`, asked together with
 `READ_SMS`). If a message comes from a known bank DLT sender (`VM-HDFCBK`, `AD-ICICIT-S`, not
-`-P` promos) and has a completed debit/credit verb plus an amount, it posts *"₹250 debited · HDFC —
-Tap to review"* (or *"USD 12.50 debited · HDFC"* for a spend abroad) on the **Transaction alerts**
-channel; it reads the home currency from `flutter.currency.home`. Tapping opens MoneyTrail, which syncs SMS on resume;
-the receiver itself stores nothing, so the Dart pipeline stays the source of truth. Turn it off in
-Settings → SMS → *Instant alerts* (pref `sms.alerts`, read natively as `flutter.sms.alerts`).
+`-P` promos) and has a completed debit/credit verb plus an amount, MoneyTrail posts a notification
+such as *"₹250 debited · HDFC"* (or *"USD 12.50 debited · HDFC"* for a spend abroad) on the
+**Transaction alerts** channel. The notification says "Captured. Your team sorts it on the web." The
+receiver reads the home currency from `flutter.currency.home` and stores no data. Tapping opens
+MoneyTrail, which syncs SMS on resume. Turn alerts off in Settings → SMS → *Instant alerts* (pref
+`sms.alerts`, read natively as `flutter.sms.alerts`).
 Android 13+ also needs the notification permission, which MoneyTrail asks for once.
 
 ## Security
@@ -137,8 +138,8 @@ Android 13+ also needs the notification permission, which MoneyTrail asks for on
   plaintext database and it retries on the next start. Every step logs with `[moneytrail-db]`. If the key is
   ever lost (keystore wiped) the unreadable file is kept aside as `moneytrail.sqlite.unreadable-<time>` and a
   new database is started.
-- **No backups.** Android cloud backup and device-to-device transfer are disabled — the data and the
-  key both stay on the phone (use the app's own export to move data).
+- **No backups.** Android cloud backup and device-to-device transfer are disabled. The data and key
+  stay on the phone. Use the app's export to move data.
 - **App lock** (Settings → Security, off by default): fingerprint / face / screen lock on a cold start
   and after more than 2 minutes in the background. Turning it on requires one successful unlock; if the
   phone's screen lock is later removed, the app lock switches itself off instead of locking you out.
@@ -152,7 +153,7 @@ flutter build apk --release      # R8 minify + resource shrinking (android/app/p
 ```
 
 Without `android/key.properties` the release APK is signed with the debug key, which is fine for
-sideloading. For a proper upload key (keep it safe and never commit it — `*.jks` and
+sideloading. For a proper upload key (keep it safe and never commit it; `*.jks` and
 `key.properties` are gitignored):
 
 ```sh
@@ -169,7 +170,7 @@ storeFile=C:/Users/<you>/moneytrail-upload.jks
 ```
 
 `storeFile` is resolved relative to `android/app/` unless absolute. Note that an APK signed with a new
-key can't be installed over one signed with the debug key — uninstall first (which deletes the data,
+key can't be installed over one signed with the debug key; uninstall first, which deletes the data,
 so export it first).
 
 ### Icon and splash

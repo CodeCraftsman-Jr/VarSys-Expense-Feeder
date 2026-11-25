@@ -99,7 +99,7 @@ class _EmailConnectScreenState extends ConsumerState<EmailConnectScreen> {
     if (!mounted) return;
     setState(() {
       _busy = false;
-      _result = error == null ? (true, 'Connected — inbox found.') : (false, error);
+      _result = error == null ? (true, 'Connected. Inbox found.') : (false, error);
     });
   }
 
@@ -130,7 +130,7 @@ class _EmailConnectScreenState extends ConsumerState<EmailConnectScreen> {
 
   void _done() {
     ScaffoldMessenger.of(context)
-        .showSnackBar(const SnackBar(content: Text('Email connected — importing in the background')));
+        .showSnackBar(const SnackBar(content: Text('Email connected. Importing in the background.')));
     Navigator.of(context).pop();
   }
 
@@ -389,7 +389,7 @@ class _HowTo extends StatelessWidget {
           'If you use 2FA: accounts.zoho.in → Security → App passwords → Generate',
           'Paste it below',
         ],
-        'Accounts outside India use imap.zoho.com — change it under Server settings.',
+        'For accounts outside India, use imap.zoho.com. Change it in Server settings.',
       ),
       _ => (
         'Any IMAP mailbox',

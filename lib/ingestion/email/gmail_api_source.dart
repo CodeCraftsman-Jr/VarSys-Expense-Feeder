@@ -53,7 +53,7 @@ class GoogleGmailAuth {
     await _ensureInit();
     final account = await GoogleSignIn.instance.attemptLightweightAuthentication();
     final authz = await account?.authorizationClient.authorizationForScopes(const [gmailReadonlyScope]);
-    if (authz == null) throw const EmailConnectException('Google access expired — reconnect Gmail in Settings');
+    if (authz == null) throw const EmailConnectException('Google access expired. Reconnect Gmail in Settings.');
     return authz.accessToken;
   }
 
@@ -113,7 +113,7 @@ Future<List<RawInput>> _gmailFetch(String token, DateTime since, int limit) asyn
         },
       );
       final r = await client.get(uri, headers: headers);
-      if (r.statusCode == 401) throw const EmailConnectException('Google access expired — reconnect Gmail in Settings');
+      if (r.statusCode == 401) throw const EmailConnectException('Google access expired. Reconnect Gmail in Settings.');
       if (r.statusCode != 200) throw EmailConnectException('Gmail API error ${r.statusCode}');
       final j = jsonDecode(r.body) as Map<String, dynamic>;
       for (final m in (j['messages'] as List? ?? const [])) {

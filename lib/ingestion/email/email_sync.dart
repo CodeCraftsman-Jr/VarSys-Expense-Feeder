@@ -202,7 +202,7 @@ class EmailSyncController extends Notifier<EmailSyncState> {
     try {
       final password = account.provider.isImap ? await ref.read(secretStoreProvider).read(emailPasswordSecret) : null;
       if (account.provider.isImap && (password == null || password.isEmpty)) {
-        state = state.copyWith(running: false, error: 'Email password missing — reconnect in Settings');
+        state = state.copyWith(running: false, error: 'Email password missing. Reconnect in Settings.');
         return null;
       }
       // Parser improved since the last import → re-parse everything once.

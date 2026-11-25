@@ -10,14 +10,14 @@ Architecture: `docs/plan/feed-architecture-plan.md`.
 [Pckt](https://github.com/pritam-ravani/pckt), copyright its original author, and is distributed
 under the same GNU General Public License version 3 (see `LICENSE`). Changes from Pckt: the app
 name, Android application id `com.varsys.moneytrail`, HTTPS-only networking, an About screen, and
-the Joint Journey feed described in the plan. The upstream README follows unchanged below for
-reference.
+the Joint Journey feed described in the plan. The sections below describe MoneyTrail and retain
+Pckt references where they explain the project's origin or shared features.
 
 ---
 
 <h1 align="center">Pckt</h1>
 
-<p align="center"><b>A free, open-source finance tracker that fills itself in.</b></p>
+<p align="center"><b>An open-source finance tracker that imports SMS and email alerts.</b></p>
 
 <p align="center">
   <a href="LICENSE"><img src="https://img.shields.io/github/license/pritam-ravani/pckt" alt="License: GPL-3.0"></a>
@@ -30,7 +30,7 @@ reference.
 
 <p align="center">
   <a href="https://github.com/pritam-ravani/pckt/releases/latest"><img src="https://img.shields.io/badge/Download-APK-6D5DF6?style=for-the-badge&logo=android&logoColor=white" alt="Download the APK" height="44"></a>
-  <br><sub>Android 7+ · free, no account, no ads</sub>
+  <br><sub>Free download · Android 7+</sub>
 </p>
 
 <p align="center">
@@ -45,11 +45,10 @@ database on your phone.
 Built for India first (Indian bank SMS formats, UPI references and VPAs, NACH/IMPS/NEFT, lakh/crore
 grouping), and works with 30+ currencies: pick your home currency, and spends abroad keep theirs.
 
-## The idea
+## How it works
 
-Most people already have a perfect record of their spending: every payment sends an SMS, and
-often an email too. What's missing is software that reads those messages *on your phone* and doesn't
-send them to someone else's server.
+Banks and merchants often send payment alerts by SMS or email. MoneyTrail reads those messages on
+your phone and stores the resulting transactions in its encrypted database.
 
 - **Messages in, transactions out.** A rule-based parser understands Indian bank alerts (sender
   IDs, amounts, account last-4, UPI refs, merchants) and reads amounts in any currency ("USD 12.50",
@@ -74,14 +73,13 @@ send them to someone else's server.
 | Budgets, recurring, export | ✓ | ✓ (recurring and backup are Pro) | Budgets, bill reminders | ✓ |
 | Platforms | Android (iOS via Shortcuts, untested) | Android, Linux, Windows | Android, iOS | Web, iOS, Android |
 
-**Oinkoin** is the closest in spirit and the inspiration: open source, offline, no ads. But every
-entry is typed by hand, and backup and recurring records are Pro features. Pckt keeps that privacy and
-openness but does the data entry for you, and everything is free.
+**Oinkoin** is another open-source, offline finance tracker. Users enter transactions by hand, and
+backup and recurring records are Pro features. MoneyTrail imports transaction alerts and includes
+backup and recurring records at no charge.
 
-**Paid and "free" commercial apps** either sync through bank aggregators (YNAB, Monarch; little Indian
-bank coverage, and a subscription), or read your SMS but pay for themselves with lending and credit
-products and keep your data in their cloud (Axio and similar Indian apps). Pckt reads the same SMS on
-the device and has nothing to sell you.
+YNAB and Monarch sync through bank aggregators and require a subscription. Some Indian apps read SMS
+and also offer lending or credit products. MoneyTrail parses messages on the phone and stores its
+data in the encrypted database.
 
 *Comparison based on each app's public pages as of October 2026; pricing and features change.*
 
@@ -145,8 +143,9 @@ SMS, so an email and its SMS become one transaction. The password is kept in the
 <details>
 <summary><b>Instant alerts</b></summary>
 
-When a bank SMS arrives, Pckt posts *"₹250 debited · HDFC — Tap to review"*. Tapping opens Pckt,
-which adds it. Turn it off in Settings → SMS → *Instant alerts*.
+When a bank SMS arrives, MoneyTrail posts a notification such as *"₹250 debited · HDFC"*. The
+notification says "Captured. Your team sorts it on the web." Tapping opens MoneyTrail, which syncs
+SMS when it resumes. Turn alerts off in Settings → SMS → *Instant alerts*.
 
 </details>
 
@@ -179,12 +178,12 @@ twice is a no-op (content-hashed id), and a message that also arrives by email i
 
 Settings → Data:
 
-- **Export transactions (CSV)** — date, amount, direction, merchant, category, account, mode,
+- **Export transactions (CSV):** date, amount, direction, merchant, category, account, mode,
   reference, note, sources, currency, converted amount and its currency (amounts use the currency's
   decimals); UTF-8 with BOM so Excel shows symbols and names correctly.
-- **Back up everything** — a JSON dump of every table (accounts, categories, transactions, raw
+- **Back up everything:** a JSON dump of every table (accounts, categories, transactions, raw
   messages, merchant rules and anything added later) with format and schema versions.
-- **Restore from backup** — validates the file (format, schema version not newer than the app,
+- **Restore from backup:** validates the file (format, schema version not newer than the app,
   required tables), shows what it contains, and after confirmation replaces all data in a single
   DB transaction (nothing changes if anything fails). Backups from v1.0 restore with every amount in
   INR.
@@ -206,16 +205,16 @@ version, you must publish its source under the same license.
 
 ## Roadmap
 
-- [x] Phase 1 — app shell, theme, DB, dashboard, activity, insights, manual entry
-- [x] Phase 2 — Android SMS import + parser, dedup, auto-categorisation, account discovery
-- [x] Phase 3 — Email: IMAP with app passwords (Gmail, Outlook, Yahoo, Zoho, any IMAP) + optional
+- [x] Phase 1: app shell, theme, DB, dashboard, activity, insights, manual entry
+- [x] Phase 2: Android SMS import + parser, dedup, auto-categorisation, account discovery
+- [x] Phase 3: Email: IMAP with app passwords (Gmail, Outlook, Yahoo, Zoho, any IMAP) + optional
       Gmail OAuth (`gmail.readonly`); email parser feeding the same pipeline, SMS↔email dedup
-- [x] Phase 4 — optional LLM features (removed; the phone no longer sends finance data to AI providers)
-- [x] Phase 5 — budgets, recurring payments, editing, SQLCipher encryption, app lock, iOS Shortcuts /
+- [x] Phase 4: optional LLM features (removed; the phone no longer sends finance data to AI providers)
+- [x] Phase 5: budgets, recurring payments, editing, SQLCipher encryption, app lock, iOS Shortcuts /
       share bridge, real-time SMS alerts, CSV export & JSON backup
-- [x] v1.0.1 — multi-currency: home currency, per-transaction and per-account currency, foreign card
+- [x] v1.0.1: multi-currency: home currency, per-transaction and per-account currency, foreign card
       spends, currency-agnostic SMS amounts for alerts from outside India
-- [ ] Next — bank sender lists and formats for the Gulf, UK, US and Singapore, iOS testing, Qualcomm
+- [ ] Next: bank sender lists and formats for the Gulf, UK, US and Singapore, iOS testing, Qualcomm
       NPU opt-in, F-Droid
 
 ## Development
